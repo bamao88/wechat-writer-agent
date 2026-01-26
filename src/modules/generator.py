@@ -1,5 +1,6 @@
 """模块B：文章生成"""
 
+import os
 import re
 from anthropic import Anthropic
 from typing import List, Optional
@@ -38,7 +39,12 @@ def generate(
     if not api_key:
         raise ValueError("请提供 ANTHROPIC_API_KEY")
 
-    client = Anthropic(api_key=api_key)
+    # 创建客户端，支持自定义 base_url
+    base_url = os.getenv("ANTHROPIC_BASE_URL")
+    if base_url:
+        client = Anthropic(api_key=api_key, base_url=base_url)
+    else:
+        client = Anthropic(api_key=api_key)
 
     # 构建系统提示词
     system_prompt = _get_system_prompt()
