@@ -1,57 +1,57 @@
-# Coding Conventions
+# 编码规范
 
-**Analysis Date:** 2026-01-27
+**分析日期:** 2026-01-27
 
-## Naming Patterns
+## 命名模式
 
-**Files:**
-- Lowercase with underscores: `generator.py`, `feishu_doc.py`, `logging_hooks.py`
-- Module files use descriptive nouns: `retrieval.py`, `agent_sdk.py`
-- Test files follow `test_*.py` pattern: `test_generator.py`, `test_feishu_doc.py`
-- Configuration files use lowercase: `pytest.ini`, `.env.example`
+**文件:**
+- 小写加下划线: `generator.py`, `feishu_doc.py`, `logging_hooks.py`
+- 模块文件使用描述性名词: `retrieval.py`, `agent_sdk.py`
+- 测试文件遵循 `test_*.py` 模式: `test_generator.py`, `test_feishu_doc.py`
+- 配置文件使用小写: `pytest.ini`, `.env.example`
 
-**Functions:**
-- Lowercase with underscores: `generate()`, `validate_temperature()`, `run_pipeline()`
-- Private/internal functions prefixed with underscore: `_get_system_prompt()`, `_build_user_message()`, `_parse_article()`
-- Async functions follow same naming: `generate_with_sdk()`, `pre_tool_use_hook()`, `post_tool_use_hook()`
+**函数:**
+- 小写加下划线: `generate()`, `validate_temperature()`, `run_pipeline()`
+- 私有/内部函数带下划线前缀: `_get_system_prompt()`, `_build_user_message()`, `_parse_article()`
+- 异步函数遵循相同命名: `generate_with_sdk()`, `pre_tool_use_hook()`, `post_tool_use_hook()`
 
-**Variables:**
-- Lowercase with underscores: `search_results`, `api_key`, `folder_token`, `max_turns`
-- Constants in UPPERCASE: `USE_AGENT_SDK` (environment-based feature flags)
-- Module-level caches prefixed with underscore: `_token_cache` (see `src/modules/feishu_doc.py`)
-- Class attributes follow lowercase convention: `self.api_key`, `self.model`, `self.temperature`
+**变量:**
+- 小写加下划线: `search_results`, `api_key`, `folder_token`, `max_turns`
+- 常量使用大写: `USE_AGENT_SDK` (基于环境变量的特性开关)
+- 模块级缓存带下划线前缀: `_token_cache` (见 `src/modules/feishu_doc.py`)
+- 类属性遵循小写约定: `self.api_key`, `self.model`, `self.temperature`
 
-**Types:**
-- Dataclasses for data structures: `SearchResult`, `Article`, `DocResult`, `PipelineResult` (see `src/models.py`)
-- Classes for stateful components: `FeishuTokenManager`, `LogDocumentGenerator`, `AgentSDKRunner`
-- Suffix pattern: `Result` for return types, `Manager` for stateful services
+**类型:**
+- 数据结构使用数据类: `SearchResult`, `Article`, `DocResult`, `PipelineResult` (见 `src/models.py`)
+- 有状态组件使用类: `FeishuTokenManager`, `LogDocumentGenerator`, `AgentSDKRunner`
+- 后缀模式: `Result` 用于返回类型, `Manager` 用于有状态服务
 
-## Code Style
+## 代码风格
 
-**Formatting:**
-- No explicit linter config (eslint/prettier equivalent) found
-- Consistent indentation: 4 spaces (Python standard)
-- Line length: appears to follow Python PEP 8 (80-99 char range seen in code)
-- Imports are organized in groups at file top
+**格式化:**
+- 未发现显式的代码检查工具配置 (相当于 eslint/prettier)
+- 一致的缩进: 4个空格 (Python 标准)
+- 行长度: 遵循 Python PEP 8 (代码中见到 80-99 字符范围)
+- 导入语句在文件顶部分组组织
 
-**Linting:**
-- No `.pylintrc`, `.flake8`, or linting config files detected
-- Code follows implicit PEP 8 conventions
-- Type hints used consistently: `def search(query: str, notebook_id: Optional[str] = None) -> List[SearchResult]`
+**代码检查:**
+- 未检测到 `.pylintrc`, `.flake8` 或其他代码检查配置文件
+- 代码遵循隐式的 PEP 8 约定
+- 一致使用类型提示: `def search(query: str, notebook_id: Optional[str] = None) -> List[SearchResult]`
 
-## Import Organization
+## 导入组织
 
-**Order:**
-1. Standard library imports: `os`, `sys`, `time`, `asyncio`, `json`, `re`, `subprocess`, `pathlib`
-2. Third-party imports: `anthropic`, `requests`, `dotenv`, `pytest`, `dataclasses`
-3. Relative imports (local modules): `from ..models import SearchResult`, `from . import retrieval`
+**顺序:**
+1. 标准库导入: `os`, `sys`, `time`, `asyncio`, `json`, `re`, `subprocess`, `pathlib`
+2. 第三方库导入: `anthropic`, `requests`, `dotenv`, `pytest`, `dataclasses`
+3. 相对导入 (本地模块): `from ..models import SearchResult`, `from . import retrieval`
 
-**Path Aliases:**
-- Uses relative imports with `..` (parent package access): `from ..models import SearchResult`, `from ..utils import validate_temperature`
-- Direct submodule imports: `from . import retrieval`, `from .agent_sdk import AgentSDKRunner`
-- No absolute path aliases (like `@/` or `@src/`) detected
+**路径别名:**
+- 使用 `..` 进行相对导入 (访问父包): `from ..models import SearchResult`, `from ..utils import validate_temperature`
+- 直接子模块导入: `from . import retrieval`, `from .agent_sdk import AgentSDKRunner`
+- 未检测到绝对路径别名 (如 `@/` 或 `@src/`)
 
-**Examples from codebase:**
+**代码库示例:**
 ```python
 # src/modules/generator.py
 import os
@@ -66,10 +66,10 @@ from .agent_sdk import AgentSDKRunner
 from ..hooks.log_generator import LogDocumentGenerator
 ```
 
-## Error Handling
+## 错误处理
 
-**Patterns:**
-- Explicit exception raising with descriptive messages (see `src/modules/retrieval.py`):
+**模式:**
+- 使用描述性消息显式抛出异常 (见 `src/modules/retrieval.py`):
   ```python
   if not skill_dir.exists():
       raise ValueError(
@@ -78,40 +78,40 @@ from ..hooks.log_generator import LogDocumentGenerator
           f"git clone https://github.com/PleasePrompto/notebooklm-skill notebooklm"
       )
   ```
-- ValueError for invalid parameters, RuntimeError for operation failures
-- Error messages include context and remediation steps
-- Retry logic with max attempts: `for attempt in range(max_retries + 1)` (see `src/main.py`)
-- Graceful degradation: searches can fail but pipeline continues with empty results
-- Global error handling in CLI: try-except with traceback printing (see `cli.py`)
+- ValueError 用于无效参数, RuntimeError 用于操作失败
+- 错误消息包含上下文和补救步骤
+- 带最大尝试次数的重试逻辑: `for attempt in range(max_retries + 1)` (见 `src/main.py`)
+- 优雅降级: 搜索可以失败但管道继续执行并返回空结果
+- CLI 中的全局错误处理: try-except 并打印追踪信息 (见 `cli.py`)
 
-**Exception types used:**
-- `ValueError`: API key missing, invalid parameters, skill not installed
-- `RuntimeError`: API failures, authentication failures, query failures, network errors
-- `TimeoutError`: Query timeouts (180s in `retrieval.search()`)
-- `NotImplementedError`: Unimplemented features (Feishu cloud document creation)
+**使用的异常类型:**
+- `ValueError`: API 密钥缺失、无效参数、技能未安装
+- `RuntimeError`: API 失败、认证失败、查询失败、网络错误
+- `TimeoutError`: 查询超时 (180秒 在 `retrieval.search()` 中)
+- `NotImplementedError`: 未实现的功能 (飞书云文档创建)
 
-## Logging
+## 日志记录
 
-**Framework:** Console output with `print()` (no logger framework)
+**框架:** 使用 `print()` 进行控制台输出 (无日志框架)
 
-**Patterns:**
-- Structured output with emoji indicators: `✅ `, `❌ `, `⚠️ `, `🚀 `, `📚 `, `✍️  `, `📄 `, `📊 ` (see `src/main.py`)
-- Progress indicators with dividers: `print(f"\n{'='*60}")`, `print(f"{'—'*60}")`
-- Stage-based output: "阶段 1/4: 检索素材", "阶段 2/4: 生成文章"
-- Hook-based logging for tool calls: `[PRE-TOOL]`, `[POST-TOOL]` (see `src/hooks/logging_hooks.py`)
-- Tool call logging records: tool name, input, output, duration, timestamps (see `AgentRunMetrics.tool_calls`)
-- Log document generation: markdown format with metrics summary (see `src/hooks/log_generator.py`)
+**模式:**
+- 使用表情符号指示器的结构化输出: `✅ `, `❌ `, `⚠️ `, `🚀 `, `📚 `, `✍️  `, `📄 `, `📊 ` (见 `src/main.py`)
+- 带分隔符的进度指示器: `print(f"\n{'='*60}")`, `print(f"{'—'*60}")`
+- 基于阶段的输出: "阶段 1/4: 检索素材", "阶段 2/4: 生成文章"
+- 基于钩子的工具调用日志: `[PRE-TOOL]`, `[POST-TOOL]` (见 `src/hooks/logging_hooks.py`)
+- 工具调用日志记录: 工具名称、输入、输出、持续时间、时间戳 (见 `AgentRunMetrics.tool_calls`)
+- 日志文档生成: markdown 格式带指标摘要 (见 `src/hooks/log_generator.py`)
 
-## Comments
+## 注释
 
-**When to Comment:**
-- Docstrings on all public functions and classes (module-level docstrings present)
-- Complex business logic: clarifying why (not what) the code does
-- Non-obvious parsing logic (e.g., output parsing with delimiters in `retrieval.py`)
-- Comments explain context when needed (e.g., "预留100秒缓冲" in token refresh logic)
+**何时添加注释:**
+- 所有公共函数和类都有文档字符串 (存在模块级文档字符串)
+- 复杂业务逻辑: 说明为什么 (而非是什么)
+- 不明显的解析逻辑 (例如, `retrieval.py` 中使用分隔符的输出解析)
+- 必要时注释解释上下文 (例如, 令牌刷新逻辑中的"预留100秒缓冲")
 
 **JSDoc/TSDoc:**
-- Uses Python docstrings (triple-quoted strings) with structured format:
+- 使用 Python 文档字符串 (三引号字符串) 和结构化格式:
   ```python
   def generate(
       topic: str,
@@ -144,47 +144,47 @@ from ..hooks.log_generator import LogDocumentGenerator
           RuntimeError: 生成失败
       """
   ```
-- Documents Args, Returns, and Raises sections
-- Note: patterns in docstrings (e.g., "Note:" section in `src/main.py` for exception handling strategy)
+- 记录 Args, Returns 和 Raises 部分
+- 注意: 文档字符串中的模式 (例如, `src/main.py` 中异常处理策略的"Note:"部分)
 
-## Function Design
+## 函数设计
 
-**Size:**
-- Functions typically 15-50 lines (small, focused functions)
-- Generator functions longer (40-200+ lines with agent loop logic)
-- Helper functions extracted for clarity: `_get_system_prompt()`, `_build_user_message()`, `_parse_article()`
+**大小:**
+- 函数通常 15-50 行 (小型、专注的函数)
+- 生成器函数较长 (40-200+ 行包含 agent 循环逻辑)
+- 为清晰提取辅助函数: `_get_system_prompt()`, `_build_user_message()`, `_parse_article()`
 
-**Parameters:**
-- Type hints on all parameters: `query: str`, `notebook_id: Optional[str] = None`
-- Default parameters for optional arguments
-- Keyword-only arguments not enforced (positional and keyword accepted)
-- Maximum 8 parameters per function (see `generate()` with 7 params)
+**参数:**
+- 所有参数都有类型提示: `query: str`, `notebook_id: Optional[str] = None`
+- 可选参数使用默认参数
+- 未强制使用仅关键字参数 (接受位置参数和关键字参数)
+- 每个函数最多 8 个参数 (见 `generate()` 有 7 个参数)
 
-**Return Values:**
-- Explicit return types: `-> Article`, `-> List[SearchResult]`, `-> Dict[str, Any]`
-- Dataclass returns for complex objects (see `Article`, `DocResult`, `PipelineResult`)
-- Tuple returns for multiple values: `-> Tuple[Article, Dict[str, Any]]` (in `generate_with_sdk()`)
-- Single values or None for simple operations
+**返回值:**
+- 显式返回类型: `-> Article`, `-> List[SearchResult]`, `-> Dict[str, Any]`
+- 复杂对象使用数据类返回 (见 `Article`, `DocResult`, `PipelineResult`)
+- 多个值使用元组返回: `-> Tuple[Article, Dict[str, Any]]` (在 `generate_with_sdk()` 中)
+- 简单操作返回单个值或 None
 
-## Module Design
+## 模块设计
 
-**Exports:**
-- Modules export top-level functions and classes
-- `src/modules/__init__.py` imports submodules for convenience: `from . import retrieval`, `from . import generator`
-- `src/utils/__init__.py` exports utility functions: `from .temperature import validate_temperature`
+**导出:**
+- 模块导出顶级函数和类
+- `src/modules/__init__.py` 为方便导入子模块: `from . import retrieval`, `from . import generator`
+- `src/utils/__init__.py` 导出工具函数: `from .temperature import validate_temperature`
 
-**Barrel Files:**
-- `src/__init__.py` exists (empty)
-- `src/modules/__init__.py` provides module imports (see pattern above)
-- `src/hooks/__init__.py` exists (empty)
-- `src/utils/__init__.py` exports public utilities
+**桶文件 (Barrel Files):**
+- `src/__init__.py` 存在 (空)
+- `src/modules/__init__.py` 提供模块导入 (见上述模式)
+- `src/hooks/__init__.py` 存在 (空)
+- `src/utils/__init__.py` 导出公共工具
 
-## Data Structure Conventions
+## 数据结构约定
 
-**Dataclasses** (see `src/models.py`):
-- Used for simple data containers with clear fields
-- Immutable-like usage (no post-initialization mutations in tests)
-- Field comments on each attribute
+**数据类** (见 `src/models.py`):
+- 用于具有明确字段的简单数据容器
+- 类似不可变的使用方式 (测试中无初始化后的修改)
+- 每个属性都有字段注释
 
 ```python
 @dataclass
@@ -201,14 +201,14 @@ class Article:
     source_summary: str  # 素材来源摘要
 ```
 
-## Configuration Patterns
+## 配置模式
 
-**Environment Variables:**
-- Loaded with `python-dotenv` in CLI: `load_dotenv()`
-- Checked with `os.getenv()` with fallback: `os.getenv("ANTHROPIC_API_KEY")`
-- Feature flags as boolean env vars: `USE_AGENT_SDK = os.getenv("USE_AGENT_SDK", "true").lower() == "true"`
-- Configuration in `.env.example` with comments explaining each setting
+**环境变量:**
+- 在 CLI 中使用 `python-dotenv` 加载: `load_dotenv()`
+- 使用 `os.getenv()` 检查并带后备: `os.getenv("ANTHROPIC_API_KEY")`
+- 作为布尔环境变量的特性开关: `USE_AGENT_SDK = os.getenv("USE_AGENT_SDK", "true").lower() == "true"`
+- `.env.example` 中的配置带注释说明每个设置
 
 ---
 
-*Convention analysis: 2026-01-27*
+*约定分析: 2026-01-27*

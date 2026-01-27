@@ -1,195 +1,195 @@
-# External Integrations
+# 外部集成
 
-**Analysis Date:** 2026-01-27
+**分析日期:** 2026-01-27
 
-## APIs & External Services
+## APIs 与外部服务
 
-**LLM Providers:**
-- MiniMax / Anthropic-compatible API - Content generation with Claude models
-  - SDK/Client: `anthropic` package
-  - Auth: `ANTHROPIC_API_KEY` (environment variable)
-  - Endpoint: Configurable via `ANTHROPIC_BASE_URL` (defaults to Anthropic's endpoint)
-  - Model: `ANTHROPIC_MODEL` environment variable
-  - Purpose: Article generation using multi-turn agent loops with tool calling
+**LLM 提供商:**
+- MiniMax / Anthropic 兼容 API - 使用 Claude 模型进行内容生成
+  - SDK/客户端: `anthropic` 包
+  - 认证: `ANTHROPIC_API_KEY` (环境变量)
+  - 端点: 通过 `ANTHROPIC_BASE_URL` 可配置 (默认为 Anthropic 端点)
+  - 模型: `ANTHROPIC_MODEL` 环境变量
+  - 用途: 使用多轮 agent 循环和工具调用进行文章生成
 
 **Google NotebookLM:**
-- Integrated via Claude skill system (`~/.claude/skills/notebooklm/`)
-- Implementation: Local subprocess execution with `retrieval.search()`
-- Auth: Handled by local NotebookLM skill (requires authentication setup via `auth_manager.py setup`)
-- Purpose: Knowledge base search and retrieval for article context
-- Location: `src/modules/retrieval.py`
-- Supported Modes:
-  - Query by notebook URL: `--notebook-url`
-  - Query by notebook ID: `--notebook-id`
-  - Auto-detect active notebook if neither provided
+- 通过 Claude 技能系统集成 (`~/.claude/skills/notebooklm/`)
+- 实现: 使用 `retrieval.search()` 本地子进程执行
+- 认证: 由本地 NotebookLM 技能处理 (需要通过 `auth_manager.py setup` 设置认证)
+- 用途: 知识库搜索和检索文章上下文
+- 位置: `src/modules/retrieval.py`
+- 支持的模式:
+  - 通过笔记本 URL 查询: `--notebook-url`
+  - 通过笔记本 ID 查询: `--notebook-id`
+  - 如果未提供则自动检测活动笔记本
 
-**Feishu (飞书) Open APIs:**
-- Tenant Access Token API - Authentication
-  - Endpoint: `https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal`
-  - Client: `requests` library
-  - Auth: App ID and App Secret (`FEISHU_APP_ID`, `FEISHU_APP_SECRET`)
-  - Token Caching: 2-hour default expiration with 100-second buffer
-  - Location: `src/modules/feishu_doc.py:FeishuTokenManager`
+**飞书开放 APIs:**
+- Tenant Access Token API - 认证
+  - 端点: `https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal`
+  - 客户端: `requests` 库
+  - 认证: App ID 和 App Secret (`FEISHU_APP_ID`, `FEISHU_APP_SECRET`)
+  - 令牌缓存: 2小时默认过期时间, 带100秒缓冲
+  - 位置: `src/modules/feishu_doc.py:FeishuTokenManager`
 
-- Document API (Cloud Documents)
-  - Endpoint: `https://open.feishu.cn/open-apis/docx/v1/documents`
-  - Method: POST to create documents
-  - Auth: Bearer token from Tenant Access Token API
-  - Purpose: Create cloud documents and write article content
-  - Block Format: Markdown converted to Feishu block structure
-  - Retry Logic: Exponential backoff for 429 (rate limit) responses
-  - Location: `src/modules/feishu_doc.py:create_doc()`
+- Document API (云文档)
+  - 端点: `https://open.feishu.cn/open-apis/docx/v1/documents`
+  - 方法: POST 创建文档
+  - 认证: Tenant Access Token API 的 Bearer 令牌
+  - 用途: 创建云文档并写入文章内容
+  - 块格式: Markdown 转换为飞书块结构
+  - 重试逻辑: 针对 429 (限流) 响应的指数退避
+  - 位置: `src/modules/feishu_doc.py:create_doc()`
 
-- Bitable (Multi-dimensional Table) API
-  - Endpoint: `https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records`
-  - Method: POST to insert records
-  - Auth: Bearer token from Tenant Access Token API
-  - Purpose: Store article metadata (title, link, timestamps, status)
-  - Optional Fields: Runtime metrics, token usage, tool call count, log document URL
-  - Required Fields: `选题名称` (topic), `文章链接` (article link), `创建时间` (timestamp), `状态` (status)
-  - Location: `src/modules/feishu_table.py:insert_record()`
+- Bitable (多维表格) API
+  - 端点: `https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records`
+  - 方法: POST 插入记录
+  - 认证: Tenant Access Token API 的 Bearer 令牌
+  - 用途: 存储文章元数据 (标题、链接、时间戳、状态)
+  - 可选字段: 运行时指标、令牌使用量、工具调用次数、日志文档 URL
+  - 必需字段: `选题名称` (主题), `文章链接` (文章链接), `创建时间` (时间戳), `状态` (状态)
+  - 位置: `src/modules/feishu_table.py:insert_record()`
 
-## Data Storage
+## 数据存储
 
-**Databases:**
-- Not detected - Application is stateless, uses external services only
+**数据库:**
+- 未检测到 - 应用程序是无状态的, 仅使用外部服务
 
-**File Storage:**
-- Feishu Cloud Documents (`feishu_doc.py`)
-  - Store article content in Feishu workspace
-  - Markdown converted to block-based format
-  - Returns document URL for reference
+**文件存储:**
+- 飞书云文档 (`feishu_doc.py`)
+  - 在飞书工作区存储文章内容
+  - Markdown 转换为基于块的格式
+  - 返回文档 URL 供参考
 
-- Local Filesystem (Logs)
-  - Log files stored in `logs/` directory
-  - Format: Markdown (.md files generated from LogDocumentGenerator)
-  - Optional upload to Feishu cloud documents
+- 本地文件系统 (日志)
+  - 日志文件存储在 `logs/` 目录
+  - 格式: Markdown (LogDocumentGenerator 生成的 .md 文件)
+  - 可选上传到飞书云文档
 
-**Caching:**
-- In-memory token caching (module-level `_token_cache`)
-  - Location: `src/modules/feishu_doc.py`
-  - Duration: 2 hours (configurable via API response)
-  - Buffer: 100-second safety margin before refresh
-  - Strategy: Lazy refresh on `get_token()` call
+**缓存:**
+- 内存令牌缓存 (模块级 `_token_cache`)
+  - 位置: `src/modules/feishu_doc.py`
+  - 持续时间: 2小时 (通过 API 响应可配置)
+  - 缓冲: 刷新前100秒安全边距
+  - 策略: `get_token()` 调用时惰性刷新
 
-## Authentication & Identity
+## 认证与身份
 
-**Auth Providers:**
+**认证提供商:**
 
-**Feishu (飞书):**
-- Implementation: OAuth 2.0 application credentials
-  - Type: Internal app authentication (tenant_access_token)
-  - Credentials: App ID + App Secret (environment variables)
-  - Token Endpoint: `https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal`
-  - Token Lifetime: ~2 hours (7200 seconds)
-  - Location: `src/modules/feishu_doc.py:FeishuTokenManager`
+**飞书:**
+- 实现: OAuth 2.0 应用程序凭证
+  - 类型: 内部应用认证 (tenant_access_token)
+  - 凭证: App ID + App Secret (环境变量)
+  - 令牌端点: `https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal`
+  - 令牌生命周期: ~2小时 (7200秒)
+  - 位置: `src/modules/feishu_doc.py:FeishuTokenManager`
 
 **Anthropic/MiniMax:**
-- Implementation: API key authentication
-  - Header: `Authorization: Bearer {API_KEY}`
-  - Managed by: `anthropic` SDK
-  - Environment Variable: `ANTHROPIC_API_KEY`
+- 实现: API 密钥认证
+  - 头部: `Authorization: Bearer {API_KEY}`
+  - 管理: `anthropic` SDK
+  - 环境变量: `ANTHROPIC_API_KEY`
 
 **NotebookLM:**
-- Implementation: Local credential storage via Claude skill
-  - Setup: `~/.claude/skills/notebooklm/scripts/run.py auth_manager.py setup`
-  - Scope: Per-machine authentication, cached by skill system
-  - Location: `src/modules/retrieval.py`
+- 实现: 通过 Claude 技能本地凭证存储
+  - 设置: `~/.claude/skills/notebooklm/scripts/run.py auth_manager.py setup`
+  - 范围: 每台机器认证, 由技能系统缓存
+  - 位置: `src/modules/retrieval.py`
 
-## Monitoring & Observability
+## 监控与可观测性
 
-**Error Tracking:**
-- Not detected - Application logs errors to console and raises exceptions
+**错误跟踪:**
+- 未检测到 - 应用程序将错误记录到控制台并抛出异常
 
-**Logs:**
-- Console output: Progress indicators, step summaries, error messages
-  - Location: `src/main.py:run_pipeline()` (printed status)
-- Local files: Markdown logs in `logs/` directory
-  - Generated by: `src/hooks/log_generator.py:LogDocumentGenerator`
-  - Content: Execution summary, tool calls, metrics, configuration
-  - Optional: Upload to Feishu cloud documents via `feishu_doc.create_doc()`
+**日志:**
+- 控制台输出: 进度指示器、步骤摘要、错误消息
+  - 位置: `src/main.py:run_pipeline()` (打印状态)
+- 本地文件: `logs/` 目录中的 Markdown 日志
+  - 生成者: `src/hooks/log_generator.py:LogDocumentGenerator`
+  - 内容: 执行摘要、工具调用、指标、配置
+  - 可选: 通过 `feishu_doc.create_doc()` 上传到飞书云文档
 
-**Metrics Collection:**
-- Agent SDK Hooks: `src/hooks/logging_hooks.py`
-  - Pre-tool-use hook: Captures tool invocation details
-  - Post-tool-use hook: Captures tool results
-  - Stop hook: Final execution status
-  - User prompt submit hook: Initial user message
-- Metrics Tracked: `src/modules/agent_sdk.py:AgentRunMetrics`
-  - Runtime duration (seconds)
-  - Total tokens used
-  - Prompt tokens / Completion tokens
-  - Tool call count
-  - System prompt and initial user message
-  - Full message history
+**指标收集:**
+- Agent SDK 钩子: `src/hooks/logging_hooks.py`
+  - Pre-tool-use hook: 捕获工具调用详情
+  - Post-tool-use hook: 捕获工具结果
+  - Stop hook: 最终执行状态
+  - User prompt submit hook: 初始用户消息
+- 跟踪的指标: `src/modules/agent_sdk.py:AgentRunMetrics`
+  - 运行时持续时间 (秒)
+  - 使用的总令牌数
+  - 提示令牌 / 完成令牌
+  - 工具调用次数
+  - 系统提示词和初始用户消息
+  - 完整消息历史
 
-## CI/CD & Deployment
+## CI/CD 与部署
 
-**Hosting:**
-- Not cloud-hosted - Local CLI application
-- Can be containerized (Docker) for deployment
-- Supports running as scheduled task or manual invocation
+**托管:**
+- 非云托管 - 本地 CLI 应用程序
+- 可以容器化 (Docker) 进行部署
+- 支持作为计划任务或手动调用运行
 
-**CI Pipeline:**
-- Not detected - No GitHub Actions or CI configuration files
-- Test framework: pytest configured in `pytest.ini`
+**CI 管道:**
+- 未检测到 - 无 GitHub Actions 或 CI 配置文件
+- 测试框架: pytest 在 `pytest.ini` 中配置
 
-## Environment Configuration
+## 环境配置
 
-**Required env vars for full functionality:**
-- `ANTHROPIC_API_KEY` - LLM provider API key (critical)
-- `FEISHU_APP_ID` - Feishu authentication (required for document/table operations)
-- `FEISHU_APP_SECRET` - Feishu authentication secret (required)
-- `FEISHU_TENANT_DOMAIN` - Feishu workspace domain (required for document URLs)
-- `FEISHU_BITABLE_APP_TOKEN` - Table integration (optional if not storing records)
-- `FEISHU_BITABLE_TABLE_ID` - Table integration (optional if not storing records)
+**完整功能所需的环境变量:**
+- `ANTHROPIC_API_KEY` - LLM 提供商 API 密钥 (关键)
+- `FEISHU_APP_ID` - 飞书认证 (文档/表格操作必需)
+- `FEISHU_APP_SECRET` - 飞书认证密钥 (必需)
+- `FEISHU_TENANT_DOMAIN` - 飞书工作区域名 (文档 URL 必需)
+- `FEISHU_BITABLE_APP_TOKEN` - 表格集成 (如果不存储记录则可选)
+- `FEISHU_BITABLE_TABLE_ID` - 表格集成 (如果不存储记录则可选)
 
-**Optional env vars:**
-- `ANTHROPIC_BASE_URL` - Custom endpoint for API routing (enables MiniMax compatibility)
-- `ANTHROPIC_MODEL` - Model selection (defaults to `MiniMax-M2.1`)
-- `NOTEBOOK_ID` / `NOTEBOOK_URL` - NotebookLM knowledge base (optional for retrieval)
-- `NOTEBOOK_NAME` - Notebook display name (default: `my_knowledge`)
-- `USE_AGENT_SDK` - Enable agent mode with full logging (default: `true`)
-- `PROMPT_VERSION` - Prompt template version (default: `V1` from `write_prompt/` directory)
-- `LOG_MAX_RESULT_LENGTH` - Tool result truncation (default: `0` = no limit)
+**可选环境变量:**
+- `ANTHROPIC_BASE_URL` - API 路由的自定义端点 (启用 MiniMax 兼容性)
+- `ANTHROPIC_MODEL` - 模型选择 (默认为 `MiniMax-M2.1`)
+- `NOTEBOOK_ID` / `NOTEBOOK_URL` - NotebookLM 知识库 (检索可选)
+- `NOTEBOOK_NAME` - 笔记本显示名称 (默认: `my_knowledge`)
+- `USE_AGENT_SDK` - 启用带完整日志的 agent 模式 (默认: `true`)
+- `PROMPT_VERSION` - 提示词模板版本 (默认: `write_prompt/` 目录中的 `V1`)
+- `LOG_MAX_RESULT_LENGTH` - 工具结果截断 (默认: `0` = 无限制)
 
-**Secrets location:**
-- `.env` file (local, should not be committed)
-- Reference: `.env.example` (safe to commit)
+**密钥位置:**
+- `.env` 文件 (本地, 不应提交)
+- 参考: `.env.example` (可安全提交)
 
-## Webhooks & Callbacks
+## Webhooks 与回调
 
-**Incoming:**
-- Not applicable - Application is pull-based, not event-driven
+**传入:**
+- 不适用 - 应用程序是拉取式的, 非事件驱动
 
-**Outgoing:**
-- None - All operations are direct API calls
+**传出:**
+- 无 - 所有操作都是直接 API 调用
 
-## API Rate Limiting & Throttling
+## API 限流与节流
 
-**Feishu APIs:**
-- Rate Limit Response: HTTP 429
-- Retry Strategy: Exponential backoff (2^attempt seconds)
-- Max Retries: 3 attempts for rate limiting
-- Backoff Delays: 1s, 2s, 4s for attempts 1, 2, 3
-- Locations: `src/modules/feishu_doc.py` (lines 308-314, 405-410)
+**飞书 APIs:**
+- 限流响应: HTTP 429
+- 重试策略: 指数退避 (2^attempt 秒)
+- 最大重试: 3次限流尝试
+- 退避延迟: 尝试1、2、3分别为1秒、2秒、4秒
+- 位置: `src/modules/feishu_doc.py` (行 308-314, 405-410)
 
 **Anthropic API:**
-- Managed by `anthropic` SDK (no explicit retry in application code)
+- 由 `anthropic` SDK 管理 (应用程序代码中无显式重试)
 
 **NotebookLM:**
-- Query Timeout: 180 seconds (3 minutes)
-- Location: `src/modules/retrieval.py:search()` (line 63)
+- 查询超时: 180秒 (3分钟)
+- 位置: `src/modules/retrieval.py:search()` (行 63)
 
-## Integration Data Flow
+## 集成数据流
 
-**Content Generation Pipeline:**
-1. **Retrieval** → NotebookLM via subprocess (`retrieval.search()`)
-2. **Generation** → Anthropic API with optional tool calls back to NotebookLM (`generator.generate()`)
-3. **Document Creation** → Feishu Cloud Documents API (`feishu_doc.create_doc()`)
-4. **Record Insertion** → Feishu Bitable API (`feishu_table.insert_record()`)
-5. **Log Archival** → Optional Feishu cloud document upload
+**内容生成管道:**
+1. **检索** → 通过子进程访问 NotebookLM (`retrieval.search()`)
+2. **生成** → Anthropic API 并可选地回调 NotebookLM 工具 (`generator.generate()`)
+3. **文档创建** → 飞书云文档 API (`feishu_doc.create_doc()`)
+4. **记录插入** → 飞书 Bitable API (`feishu_table.insert_record()`)
+5. **日志归档** → 可选上传到飞书云文档
 
 ---
 
-*Integration audit: 2026-01-27*
+*集成审计: 2026-01-27*
