@@ -1,10 +1,123 @@
 # 开发阶段与进度管理
 
-**最后更新**: 2026-01-26 (**API 迁移到 MiniMax 完成**) ✨
-**项目状态**: ✅ 全部核心模块完成 (A+B+C+D), 测试覆盖率 83%, 端到端完全可用 🎉
+**最后更新**: 2026-01-27 (**Agent日志系统完成**) ✨
+**项目状态**: ✅ 全部核心模块完成 (A+B+C+D+日志系统), 测试覆盖率 90%+, 端到端完全可用 🎉
 **API 状态**: ✅ 已迁移到 MiniMax Anthropic 兼容 API，所有测试通过
+**日志系统**: ✅ Claude Agent SDK集成完成，自动记录运行日志到飞书
 
-> **参考文档**: [arch.md](arch.md) - 完整的系统设计和模块规划
+> **参考文档**: [arch.md](arch.md) - 完整的系统设计和模块规划 | [rizhi.md](rizhi.md) - Agent日志系统实施计划
+
+---
+
+## 🔧 Agent日志记录系统（2026-01-27）
+
+### 实施概述
+
+**目标**: 迁移到Claude Agent SDK并实现基于hooks的运行日志记录系统
+
+**核心功能**:
+- ✅ **Claude Agent SDK集成**: 从手动agent循环迁移到标准SDK
+- ✅ **Hooks日志记录**: 使用SDK原生hooks捕获执行数据
+- ✅ **飞书云文档**: 自动创建详细日志文档并上传
+- ✅ **飞书多维表格**: 新增4个字段（日志URL、运行时长、Token使用量、工具调用次数）
+- ✅ **向后兼容**: 通过特性开关`USE_AGENT_SDK`保持现有功能可用
+
+### 技术实现
+
+#### 新增文件
+1. **src/modules/agent_sdk.py** (236行) - Claude Agent SDK封装
+   - `AgentRunMetrics`: 运行指标数据类
+   - `AgentSDKRunner`: SDK运行器，集成hooks
+   - 支持MiniMax API（通过ANTHROPIC_BASE_URL）
+
+2. **src/hooks/logging_hooks.py** (95行) - 4个lifecycle hooks
+   - `pre_tool_use_hook`: 工具调用前记录
+   - `post_tool_use_hook`: 工具调用后记录结果
+   - `stop_hook`: Agent运行结束，标记结束时间
+   - `user_prompt_submit_hook`: 记录初始topic
+
+3. **src/hooks/log_generator.py** (81行) - 日志文档生成器
+   - `LogDocumentGenerator`: 从metrics生成markdown格式日志
+
+#### 修改文件
+1. **src/modules/generator.py** - 添加`generate_with_sdk()`异步函数
+2. **src/modules/feishu_table.py** - 添加4个新字段验证（注意：飞书中配置为文本类型）
+3. **src/main.py** - 集成SDK路径，上传日志文档，添加表格字段
+
+#### 飞书表格新增字段
+
+| 字段名 | 飞书字段类型 | 代码类型 | 说明 |
+|--------|------------|---------|------|
+| 日志文档URL | 文本(Type 1) | str | 指向飞书云文档的完整链接 |
+| 运行时长（秒） | 文本(Type 1) | str | 保留2位小数，如"43.79" |
+| Token使用量 | 文本(Type 1) | str | 整数字符串，如"1989" |
+| 工具调用次数 | 文本(Type 1) | str | 整数字符串，如"0" |
+
+**⚠️ 重要**: 虽然计划中设计为数字类型，但实际飞书配置中这些字段为文本类型(Type 1)，代码已调整为转换成字符串。
+
+### 测试覆盖
+
+**新增测试文件**:
+- `tests/test_agent_sdk_metrics.py` - AgentRunMetrics测试 (12个测试)
+- `tests/test_agent_sdk_runner.py` - AgentSDKRunner测试 (18个测试)
+- `tests/test_logging_hooks.py` - Hooks功能测试 (12个测试)
+- `tests/test_log_generator.py` - 日志生成器测试 (9个测试)
+- `tests/test_generator_sdk.py` - SDK集成测试 (9个测试)
+
+**总计**: 60个新增测试，全部通过 ✅
+
+**覆盖率**: 90%+ (agent_sdk.py: 92%, logging_hooks.py: 94%, log_generator.py: 91%)
+
+### 实际验证结果
+
+**测试日期**: 2026-01-27 11:47
+**测试选题**: "AI产品经理要参与架构选型"
+
+**运行结果**:
+- ✅ 文章生成: 3,091字符，质量良好
+- ✅ 运行时长: 43.79秒
+- ✅ Token使用: 1,989 tokens (Prompt: 105, Completion: 1,884)
+- ✅ 工具调用: 0次
+- ✅ 飞书文章文档: 成功上传
+- ✅ 飞书日志文档: 成功上传
+- ✅ 飞书表格记录: 成功创建，包含4个新字段
+
+### 已知限制
+
+⚠️ **限制1: 日志内容不完整**
+- **现状**: 当前日志仅记录工具调用的输入/输出，不包含agent思考过程
+- **缺失内容**:
+  - Agent的推理和思考过程
+  - 工具调用前的决策依据
+  - 每轮对话的完整上下文
+  - 中间生成的文本片段
+- **影响**: 难以深度复现agent的决策路径
+- **后续优化**: 考虑添加更多hooks或使用SDK的message流捕获完整对话
+
+⚠️ **限制2: 测试中未触发工具调用**
+- **现状**: 实际测试中工具调用次数为0
+- **原因**:
+  - NotebookLM工具需要notebook_id配置
+  - 测试选题可能未触发工具调用条件
+  - Agent判断无需额外检索即可生成文章
+- **影响**: 无法验证工具调用日志的完整性
+- **后续验证**: 需要配置NotebookLM并使用需要检索的选题测试
+
+### 配置切换
+
+**启用SDK模式**（默认）:
+```bash
+USE_AGENT_SDK=true  # 已设为默认
+```
+
+**回退到旧实现**（如需要）:
+```bash
+USE_AGENT_SDK=false
+```
+
+### 参考资料
+- [Agent日志系统实施计划](rizhi.md) - 完整设计文档
+- [Claude Agent SDK文档](https://github.com/anthropics/claude-agent-sdk-python)
 
 ---
 
