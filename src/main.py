@@ -8,7 +8,7 @@ from .modules import retrieval, generator, feishu_doc, feishu_table
 from .models import PipelineResult
 
 # 特性开关：是否使用Claude Agent SDK
-USE_AGENT_SDK = os.getenv("USE_AGENT_SDK", "false").lower() == "true"
+USE_AGENT_SDK = os.getenv("USE_AGENT_SDK", "true").lower() == "true"
 
 
 def run_pipeline(

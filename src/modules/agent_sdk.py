@@ -212,14 +212,22 @@ class AgentSDKRunner:
         # 调用SDK query
         result_text = ""
         async for message in query(prompt=user_message, options=options):
-            if hasattr(message, 'text') and message.text:
-                result_text += message.text
+            # ResultMessage 包含最终结果
+            if hasattr(message, 'result'):
+                result_text = message.result
 
             # 更新token统计（如果可用）
-            if hasattr(message, 'usage'):
-                metrics.total_tokens = getattr(message.usage, 'total_tokens', 0)
-                metrics.prompt_tokens = getattr(message.usage, 'prompt_tokens', 0)
-                metrics.completion_tokens = getattr(message.usage, 'completion_tokens', 0)
+            if hasattr(message, 'usage') and message.usage:
+                # usage 是一个字典
+                if isinstance(message.usage, dict):
+                    input_tokens = message.usage.get('input_tokens', 0)
+                    cache_read_tokens = message.usage.get('cache_read_input_tokens', 0)
+                    output_tokens = message.usage.get('output_tokens', 0)
+
+                    # 总输入 = 新输入 + 缓存读取
+                    metrics.prompt_tokens = input_tokens + cache_read_tokens
+                    metrics.completion_tokens = output_tokens
+                    metrics.total_tokens = metrics.prompt_tokens + metrics.completion_tokens
 
         # 标记结束时间
         metrics.end_time = time.time()
