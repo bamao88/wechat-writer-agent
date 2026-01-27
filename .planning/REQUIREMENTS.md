@@ -64,32 +64,32 @@
 
 ## 需求追溯
 
-需求到阶段的映射,在路线图创建时填充。
+需求到阶段的映射。
 
 | 需求 | 阶段 | 状态 |
 |------|------|------|
-| TOOL-01 | Phase ? | Pending |
-| TOOL-02 | Phase ? | Pending |
-| TOOL-03 | Phase ? | Pending |
-| TOOL-04 | Phase ? | Pending |
-| VAL-01 | Phase ? | Pending |
-| VAL-02 | Phase ? | Pending |
-| VAL-03 | Phase ? | Pending |
-| VAL-04 | Phase ? | Pending |
-| ERR-01 | Phase ? | Pending |
-| ERR-02 | Phase ? | Pending |
-| ERR-03 | Phase ? | Pending |
-| ERR-04 | Phase ? | Pending |
-| API-01 | Phase ? | Pending |
-| API-02 | Phase ? | Pending |
-| API-03 | Phase ? | Pending |
-| API-04 | Phase ? | Pending |
+| TOOL-01 | 阶段 1 | Pending |
+| TOOL-02 | 阶段 1 | Pending |
+| TOOL-03 | 阶段 1 | Pending |
+| TOOL-04 | 阶段 1 | Pending |
+| API-01 | 阶段 1 | Pending |
+| API-02 | 阶段 1 | Pending |
+| VAL-01 | 阶段 2 | Pending |
+| VAL-02 | 阶段 2 | Pending |
+| VAL-03 | 阶段 2 | Pending |
+| VAL-04 | 阶段 2 | Pending |
+| API-03 | 阶段 2 | Pending |
+| ERR-01 | 阶段 3 | Pending |
+| ERR-02 | 阶段 3 | Pending |
+| ERR-03 | 阶段 3 | Pending |
+| ERR-04 | 阶段 3 | Pending |
+| API-04 | 阶段 3 | Pending |
 
 **覆盖率:**
 - v0.1 需求: 16 个
-- 已映射到阶段: 0
-- 未映射: 16 ⚠️
+- 已映射到阶段: 16 个 ✓
+- 未映射: 0
 
 ---
 *需求定义于: 2026-01-27*
-*最后更新: 2026-01-27 初始定义后*
+*最后更新: 2026-01-28 路线图修订后*
