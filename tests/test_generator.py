@@ -699,3 +699,67 @@ class TestHelperFunctions:
         assert "来源C" in article.source_summary
         # 正好3个时，不应该有 "等"
         assert " 等" not in article.source_summary
+
+    @patch('src.modules.generator.Anthropic')
+    def test_generate_uses_validated_temperature(self, mock_anthropic_class):
+        """测试 generate 函数使用验证后的 temperature"""
+        import os
+
+        # Mock client
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+
+        # Mock response
+        mock_response = MagicMock()
+        mock_response.stop_reason = "end_turn"
+        mock_content = MagicMock()
+        mock_content.text = "# 测试文章\n\n内容"
+        mock_response.content = [mock_content]
+        mock_client.messages.create.return_value = mock_response
+
+        # 测试 temperature=0.0 被调整
+        article = generator.generate(
+            topic="测试",
+            search_results=[],
+            api_key="test-key",
+            temperature=0.0  # 应该被调整为 0.001
+        )
+
+        # 验证实际调用参数
+        call_args = mock_client.messages.create.call_args
+        assert call_args[1]['temperature'] == 0.001
+
+    @patch('src.modules.generator.Anthropic')
+    def test_generate_with_minimax_base_url(self, mock_anthropic_class):
+        """测试使用 MiniMax base_url 创建客户端"""
+        import os
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            'ANTHROPIC_BASE_URL': 'https://api.minimaxi.com/anthropic'
+        }):
+            mock_client = MagicMock()
+            mock_anthropic_class.return_value = mock_client
+
+            # Mock response
+            mock_response = MagicMock()
+            mock_response.stop_reason = "end_turn"
+            mock_content = MagicMock()
+            mock_content.text = "# 文章标题\n\n文章内容"
+            mock_response.content = [mock_content]
+            mock_client.messages.create.return_value = mock_response
+
+            article = generator.generate(
+                topic="测试MiniMax",
+                search_results=[],
+                api_key="minimax-key",
+                model="MiniMax-M2.1"
+            )
+
+            # 验证使用了 MiniMax base_url
+            mock_anthropic_class.assert_called_once_with(
+                api_key="minimax-key",
+                base_url='https://api.minimaxi.com/anthropic'
+            )
+
+            assert article.title == "文章标题"

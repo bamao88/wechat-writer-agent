@@ -30,7 +30,7 @@ class TestAgentInitialization:
         agent = WechatWriterAgent()
 
         assert agent is not None
-        assert agent.model == "claude-3-5-sonnet-20241022"
+        assert agent.model == "MiniMax-M2.1"  # 默认模型已更新为 MiniMax-M2.1
         assert agent.api_key == 'test-key-123'
 
     @patch('writer_agent.Anthropic')
@@ -524,6 +524,28 @@ class TestStopReasonHandling:
 
         # 应该返回当前内容，不崩溃
         assert isinstance(result, str)
+
+    @patch('writer_agent.Anthropic')
+    @patch('notebooklm_tool.Path.exists')
+    def test_agent_supports_base_url_from_env(self, mock_exists, mock_anthropic_class):
+        """测试 Agent 支持从环境变量读取 base_url"""
+        mock_exists.return_value = True
+        import os
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            'ANTHROPIC_API_KEY': 'test-key',
+            'ANTHROPIC_BASE_URL': 'https://api.minimaxi.com/anthropic'
+        }):
+            agent = WechatWriterAgent()
+
+            # 验证客户端创建时使用了 base_url
+            # 注意: 当前 writer_agent.py 不支持此功能，测试会失败
+            # 这是 TDD 红灯阶段的预期行为
+            mock_anthropic_class.assert_called_with(
+                api_key='test-key',
+                base_url='https://api.minimaxi.com/anthropic'
+            )
 
 
 if __name__ == "__main__":

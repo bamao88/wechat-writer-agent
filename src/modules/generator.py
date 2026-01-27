@@ -6,16 +6,18 @@ from anthropic import Anthropic
 from typing import List, Optional
 from ..models import SearchResult, Article
 from . import retrieval
+from ..utils import validate_temperature
 
 
 def generate(
     topic: str,
     search_results: List[SearchResult],
     api_key: str,
-    model: str = "claude-3-5-sonnet-20241022",
+    model: str = "MiniMax-M2.1",
     max_turns: int = 10,
     notebook_id: Optional[str] = None,
-    notebook_url: Optional[str] = None
+    notebook_url: Optional[str] = None,
+    temperature: float = 0.7
 ) -> Article:
     """
     基于检索结果生成文章
@@ -28,6 +30,7 @@ def generate(
         max_turns: 最大对话轮数
         notebook_id: NotebookLM 笔记本 ID（用于追加检索）
         notebook_url: NotebookLM 笔记本 URL（用于追加检索）
+        temperature: 生成温度参数
 
     Returns:
         生成的文章
@@ -38,6 +41,9 @@ def generate(
     """
     if not api_key:
         raise ValueError("请提供 ANTHROPIC_API_KEY")
+
+    # 验证 temperature 参数
+    temperature = validate_temperature(temperature)
 
     # 创建客户端，支持自定义 base_url
     base_url = os.getenv("ANTHROPIC_BASE_URL")
@@ -76,6 +82,7 @@ def generate(
             response = client.messages.create(
                 model=model,
                 max_tokens=4096,
+                temperature=temperature,
                 system=system_prompt,
                 tools=tools,
                 messages=messages

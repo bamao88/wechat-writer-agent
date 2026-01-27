@@ -14,10 +14,11 @@ import re
 class DetailedLogger:
     """详细日志记录器"""
 
-    def __init__(self, topic: str):
+    def __init__(self, topic: str, prompt_name: str = "default"):
         self.topic = topic
+        self.prompt_name = prompt_name
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_file = f"logs/generation_{self.timestamp}.md"
+        self.log_file = f"logs/generation_{self.timestamp}_{prompt_name}.md"
         self.logs = []
 
         # 创建日志目录
@@ -31,6 +32,7 @@ class DetailedLogger:
         header = f"""# 文章生成详细日志
 
 **选题**: {self.topic}
+**提示词**: {self.prompt_name}
 **生成时间**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 **日志文件**: {self.log_file}
 
@@ -143,7 +145,9 @@ def generate_with_detailed_logs(
     topic: str,
     api_key: str,
     base_url: str,
-    model: str = "claude-sonnet-4-5-20250929"
+    model: str = "claude-sonnet-4-5-20250929",
+    system_prompt: str = "",
+    prompt_name: str = "default"
 ):
     """
     带详细日志的文章生成（使用 OpenAI 兼容接口）
@@ -153,11 +157,13 @@ def generate_with_detailed_logs(
         api_key: API Key
         base_url: API Base URL
         model: 使用的模型
+        system_prompt: 系统提示词
+        prompt_name: 提示词名称
 
     Returns:
         生成的文章对象和日志文件路径
     """
-    logger = DetailedLogger(topic)
+    logger = DetailedLogger(topic, prompt_name)
 
     try:
         # 阶段 1: 检索
@@ -177,7 +183,8 @@ def generate_with_detailed_logs(
             api_key=api_key,
             base_url=base_url,
             model=model,
-            logger=logger
+            logger=logger,
+            system_prompt=system_prompt
         )
 
         # 记录最终结果
@@ -198,10 +205,20 @@ def generator_with_logs(
     api_key: str,
     base_url: str,
     model: str,
-    logger: DetailedLogger
+    logger: DetailedLogger,
+    system_prompt: str
 ):
     """
     带日志记录的生成器（使用 OpenAI SDK）
+
+    Args:
+        topic: 文章主题
+        search_results: 检索结果列表
+        api_key: API Key
+        base_url: API Base URL
+        model: 使用的模型
+        logger: 日志记录器
+        system_prompt: 系统提示词
     """
     from openai import OpenAI
 
@@ -218,29 +235,6 @@ def generator_with_logs(
 
     logger._append_log(f"\n**API Base URL**: {base_url}\n")
     logger._append_log(f"**使用模型**: {model}\n\n")
-
-    # 构建系统提示词
-    system_prompt = """你是一个专业的公众号文章写作助手。你的任务是帮助用户撰写高质量的公众号文章。
-
-核心要求：
-1. **使用提供的素材**：
-   - 用户已经为你检索了相关素材，优先使用这些素材
-
-2. **保持个人风格**：
-   - 不要写成通识科普，要有明确的个人观点
-   - 结合具体经验和案例
-   - 保持真实性和独特性
-
-3. **文章结构**：
-   - 吸引人的标题和开头
-   - 清晰的逻辑结构
-   - 具体的案例支撑观点
-   - 启发性的结论
-
-4. **输出格式**：
-   - 使用 Markdown 格式
-   - 标题使用 # 开头（一级标题）
-   - 正文分段清晰，适当使用二级标题（##）"""
 
     # 构建用户消息（限制每条素材最多 2000 字符）
     user_message = f"选题：{topic}\n\n"
@@ -331,8 +325,91 @@ def _parse_article(text: str, topic: str, search_results: list) -> Article:
     )
 
 
+def discover_prompt_files(prompt_dir: str) -> list[str]:
+    """
+    发现并返回提示词目录中的所有有效提示词文件
+
+    Args:
+        prompt_dir: 提示词目录路径
+
+    Returns:
+        有效提示词文件的绝对路径列表（已排序）
+
+    Raises:
+        FileNotFoundError: 目录不存在
+        ValueError: 目录为空或没有有效的提示词文件
+    """
+    # 检查目录是否存在
+    if not os.path.exists(prompt_dir):
+        raise FileNotFoundError(f"提示词目录不存在: {prompt_dir}")
+
+    if not os.path.isdir(prompt_dir):
+        raise NotADirectoryError(f"路径不是目录: {prompt_dir}")
+
+    # 扫描目录中的文件
+    valid_files = []
+    valid_extensions = {'.txt', '.md'}
+
+    for filename in os.listdir(prompt_dir):
+        # 过滤隐藏文件
+        if filename.startswith('.'):
+            continue
+
+        # 过滤特殊文件
+        if filename in {'.DS_Store'} or filename.endswith('~') or filename.endswith('.bak'):
+            continue
+
+        # 构建完整路径
+        full_path = os.path.join(prompt_dir, filename)
+
+        # 只包含常规文件，跳过目录
+        if not os.path.isfile(full_path):
+            continue
+
+        # 检查文件扩展名
+        _, ext = os.path.splitext(filename)
+        if ext.lower() in valid_extensions:
+            valid_files.append(full_path)
+
+    # 检查是否找到有效文件
+    if not valid_files:
+        raise ValueError(f"在 {prompt_dir} 目录中未找到有效的提示词文件（支持 .txt 和 .md 格式）")
+
+    # 返回排序后的文件列表
+    return sorted(valid_files)
+
+
+def load_prompt_from_file(prompt_path: str) -> str:
+    """
+    从文件中加载提示词内容
+
+    Args:
+        prompt_path: 提示词文件路径
+
+    Returns:
+        提示词内容字符串
+
+    Raises:
+        IOError: 文件读取失败
+        ValueError: 文件内容为空
+    """
+    try:
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+
+        if not content:
+            raise ValueError(f"提示词文件为空: {prompt_path}")
+
+        return content
+
+    except UnicodeDecodeError as e:
+        raise IOError(f"无法读取文件（编码错误）: {prompt_path} - {str(e)}")
+    except Exception as e:
+        raise IOError(f"读取文件失败: {prompt_path} - {str(e)}")
+
+
 def main():
-    """主函数"""
+    """主函数 - 迭代处理多个提示词文件"""
     # 加载环境变量
     load_dotenv()
 
@@ -340,7 +417,7 @@ def main():
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         print("❌ 错误：未设置 ANTHROPIC_API_KEY")
-        return
+        exit(1)
 
     # 获取配置
     base_url = os.getenv("ANTHROPIC_BASE_URL", "https://api.chatanywhere.tech/v1")
@@ -350,7 +427,8 @@ def main():
     print("🚀 带详细日志的文章生成器（OpenAI 兼容接口）")
     print("="*60)
 
-    # 选题
+    # 定义常量
+    PROMPT_DIR = "write_prompt"
     topic = "产品经理如何做技术选型调研"
 
     print(f"\n📝 选题: {topic}")
@@ -358,34 +436,71 @@ def main():
     print(f"🔗 API: {base_url}")
     print(f"📚 使用 NotebookLM 检索")
 
+    # 发现提示词文件
     try:
-        # 生成文章
-        article, log_file = generate_with_detailed_logs(
-            topic=topic,
-            api_key=api_key,
-            base_url=base_url,
-            model=model
-        )
+        prompt_files = discover_prompt_files(PROMPT_DIR)
+        print(f"\n✅ 发现 {len(prompt_files)} 个提示词文件")
+    except (FileNotFoundError, ValueError) as e:
+        print(f"\n❌ 错误: {str(e)}")
+        exit(1)
 
-        # 保存文章到单独文件
-        article_file = f"generated/{topic.replace(' ', '_').replace('/', '_')}.md"
-        os.makedirs("generated", exist_ok=True)
+    # 迭代处理每个提示词
+    success_count = 0
+    total = len(prompt_files)
 
-        with open(article_file, "w", encoding="utf-8") as f:
-            f.write(article.content)
-
-        print(f"\n✅ 文章已保存到: {article_file}")
-        print(f"📋 详细日志: {log_file}")
-
+    for i, prompt_file in enumerate(prompt_files, 1):
         print("\n" + "="*60)
-        print("生成完成！")
+        print(f"🔄 处理提示词 {i}/{total}")
         print("="*60)
 
-    except Exception as e:
-        print(f"\n❌ 错误: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        # 提取提示词文件名（不含扩展名）
+        prompt_filename = os.path.basename(prompt_file)
+        prompt_name = os.path.splitext(prompt_filename)[0]
+
+        try:
+            # 加载提示词内容
+            system_prompt = load_prompt_from_file(prompt_file)
+            print(f"📝 使用提示词: {prompt_filename}")
+
+            # 生成唯一时间戳
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            # 生成文章
+            article, log_file = generate_with_detailed_logs(
+                topic=topic,
+                api_key=api_key,
+                base_url=base_url,
+                model=model,
+                system_prompt=system_prompt,
+                prompt_name=prompt_name
+            )
+
+            # 保存文章到单独文件
+            topic_sanitized = topic.replace(' ', '_').replace('/', '_')
+            article_file = f"generated/{topic_sanitized}_{prompt_name}_{timestamp}.md"
+            os.makedirs("generated", exist_ok=True)
+
+            with open(article_file, "w", encoding="utf-8") as f:
+                f.write(article.content)
+
+            print(f"\n✅ 文章已保存到: {article_file}")
+            print(f"📋 详细日志: {log_file}")
+
+            success_count += 1
+
+        except Exception as e:
+            print(f"\n❌ 处理提示词 '{prompt_filename}' 时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            print(f"\n⚠️  跳过此提示词，继续处理下一个...")
+            continue
+
+    # 最终总结
+    print("\n" + "="*60)
+    print(f"🎉 所有提示词处理完成！共生成 {success_count}/{total} 篇文章")
+    print("="*60)
 
 
 if __name__ == "__main__":
     main()
+

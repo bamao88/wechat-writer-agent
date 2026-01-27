@@ -14,7 +14,7 @@ class WechatWriterAgent:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "claude-3-5-sonnet-20241022",
+        model: str = "MiniMax-M2.1",
         notebook_id: Optional[str] = None,
         notebook_url: Optional[str] = None
     ):
@@ -23,7 +23,7 @@ class WechatWriterAgent:
 
         Args:
             api_key: Anthropic API Key，如果不提供则从环境变量读取
-            model: 使用的模型，默认 claude-3-5-sonnet-20241022
+            model: 使用的模型，默认 MiniMax-M2.1
             notebook_id: NotebookLM 笔记本 ID（从库中获取）
             notebook_url: NotebookLM 笔记本 URL（直接指定）
         """
@@ -32,7 +32,14 @@ class WechatWriterAgent:
             raise ValueError("请设置 ANTHROPIC_API_KEY 环境变量或传入 api_key 参数")
 
         self.model = model
-        self.client = Anthropic(api_key=self.api_key)
+
+        # 支持自定义 base_url
+        base_url = os.getenv("ANTHROPIC_BASE_URL")
+        if base_url:
+            self.client = Anthropic(api_key=self.api_key, base_url=base_url)
+        else:
+            self.client = Anthropic(api_key=self.api_key)
+
         self.notebooklm = create_notebooklm_tool(
             notebook_id=notebook_id,
             notebook_url=notebook_url

@@ -1,6 +1,6 @@
 # 微信公众号文章写作 Agent
 
-基于 Claude API 和 NotebookLM 的智能写作助手，能够在写作过程中动态调用知识库获取素材，生成高质量的公众号文章。
+基于 MiniMax API（Anthropic 兼容）和 NotebookLM 的智能写作助手，能够在写作过程中动态调用知识库获取素材，生成高质量的公众号文章。
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -45,9 +45,18 @@ pip install -r requirements.txt
 # 复制配置文件
 cp .env.example .env
 
-# 编辑 .env 文件
-# 设置 ANTHROPIC_API_KEY=your-api-key-here
+# 编辑 .env 文件，配置 MiniMax API
+# ANTHROPIC_API_KEY=your-minimax-api-key-here
+# ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic
+# ANTHROPIC_MODEL=MiniMax-M2.1
 ```
+
+**获取 MiniMax API Key**:
+1. 访问 [https://platform.minimaxi.com](https://platform.minimaxi.com)
+2. 注册账号并创建 API Key
+3. 将 Key 粘贴到 `.env` 文件中
+
+> 💡 **提示**: 项目已从第三方 Anthropic 代理迁移到 MiniMax 官方 API。详见 [docs/status.md](status.md)
 
 ### 4. 运行
 
@@ -230,11 +239,12 @@ def run_pipeline(
 
 ## 🔗 相关资源
 
-- [Claude API 文档](https://docs.anthropic.com/)
+- [MiniMax API 文档](https://platform.minimaxi.com/docs/api-reference/text-anthropic-api)
+- [Anthropic Claude 文档](https://docs.anthropic.com/)
 - [NotebookLM](https://notebooklm.google/)
 - [项目文档](docs/)
 
 ---
 
 **维护者**: 项目团队
-**最后更新**: 2026-01-25
+**最后更新**: 2026-01-26（API 迁移到 MiniMax）
