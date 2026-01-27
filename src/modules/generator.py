@@ -3,10 +3,12 @@
 import os
 import re
 from anthropic import Anthropic
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from ..models import SearchResult, Article
 from . import retrieval
 from ..utils import validate_temperature
+from .agent_sdk import AgentSDKRunner
+from ..hooks.log_generator import LogDocumentGenerator
 
 
 def generate(
@@ -257,3 +259,87 @@ def _parse_article(text: str, topic: str, search_results: List[SearchResult]) ->
         content=content,
         source_summary=source_summary
     )
+
+
+async def generate_with_sdk(
+    topic: str,
+    search_results: List[SearchResult],
+    api_key: str,
+    model: str = "MiniMax-M2.1",
+    max_turns: int = 10,
+    notebook_id: Optional[str] = None,
+    notebook_url: Optional[str] = None,
+    temperature: float = 0.7
+) -> tuple[Article, Dict[str, Any]]:
+    """
+    使用Claude Agent SDK生成文章（带metrics）
+
+    Args:
+        topic: 文章主题
+        search_results: 预先检索的结果列表
+        api_key: Anthropic API Key
+        model: 使用的模型
+        max_turns: 最大对话轮数
+        notebook_id: NotebookLM 笔记本 ID（用于追加检索）
+        notebook_url: NotebookLM 笔记本 URL（用于追加检索）
+        temperature: 生成温度参数
+
+    Returns:
+        (Article, metrics_dict)
+        metrics_dict包含:
+        - runtime_seconds: float
+        - tool_call_count: int
+        - total_tokens: int
+        - prompt_tokens: int
+        - completion_tokens: int
+        - log_markdown: str
+
+    Raises:
+        ValueError: API Key 无效或参数错误
+        RuntimeError: 生成失败
+    """
+    # 1. 验证 API Key
+    if not api_key:
+        raise ValueError("请提供 ANTHROPIC_API_KEY")
+
+    # 2. 验证 temperature 参数
+    temperature = validate_temperature(temperature)
+
+    # 3. 创建 SDK runner
+    runner = AgentSDKRunner(
+        api_key=api_key,
+        model=model,
+        temperature=temperature,
+        notebook_id=notebook_id,
+        notebook_url=notebook_url
+    )
+
+    # 4. 获取系统提示词
+    system_prompt = _get_system_prompt()
+
+    # 5. 生成文章
+    result_text, metrics = await runner.generate(
+        topic=topic,
+        search_results=search_results,
+        system_prompt=system_prompt,
+        max_turns=max_turns
+    )
+
+    # 6. 解析文章
+    article = _parse_article(result_text, topic, search_results)
+
+    # 7. 生成日志文档
+    log_gen = LogDocumentGenerator(topic, metrics)
+    log_markdown = log_gen.generate_markdown()
+
+    # 8. 构建 metrics 字典
+    metrics_dict = {
+        'runtime_seconds': metrics.runtime_seconds,
+        'tool_call_count': metrics.tool_call_count,
+        'total_tokens': metrics.total_tokens,
+        'prompt_tokens': metrics.prompt_tokens,
+        'completion_tokens': metrics.completion_tokens,
+        'log_markdown': log_markdown
+    }
+
+    return article, metrics_dict
