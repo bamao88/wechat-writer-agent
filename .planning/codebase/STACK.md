@@ -1,120 +1,120 @@
-# Technology Stack
+# 技术栈
 
-**Analysis Date:** 2026-01-27
+**分析日期:** 2026-01-27
 
-## Languages
+## 编程语言
 
-**Primary:**
-- Python 3.13.3 - All core application logic, modules, and utilities
+**主要语言:**
+- Python 3.13.3 - 所有核心应用逻辑、模块和工具
 
-## Runtime
+## 运行时环境
 
-**Environment:**
+**环境:**
 - Python 3.13.3
-- Virtual environment: `.venv/` directory (present)
+- 虚拟环境: `.venv/` 目录(已存在)
 
-**Package Manager:**
-- pip - Python package management
-- Lockfile: Not detected (requirements.txt used instead of lock file)
+**包管理器:**
+- pip - Python 包管理
+- 锁文件: 未检测到(使用 requirements.txt 而非锁文件)
 
-## Frameworks
+## 框架
 
-**Core:**
-- Anthropic SDK (`anthropic>=0.39.0`) - LLM integration for article generation using Claude models
-- Claude Agent SDK (`claude_agent_sdk`) - Agent framework with tool calling and hooks support for NotebookLM integration
-- python-dotenv (`>=1.0.0`) - Environment configuration loading
+**核心框架:**
+- Anthropic SDK (`anthropic>=0.39.0`) - 使用 Claude 模型进行文章生成的 LLM 集成
+- Claude Agent SDK (`claude_agent_sdk`) - 支持工具调用和钩子的 Agent 框架,用于 NotebookLM 集成
+- python-dotenv (`>=1.0.0`) - 环境配置加载
 
-**Testing:**
-- pytest (`>=7.4.0`) - Test framework and runner
-- pytest-timeout (`>=2.1.0`) - Test execution timeout control
-- pytest-mock (`>=3.11.0`) - Mocking and fixture support
-- pytest-cov (`>=4.1.0`) - Test coverage reporting
+**测试框架:**
+- pytest (`>=7.4.0`) - 测试框架和运行器
+- pytest-timeout (`>=2.1.0`) - 测试执行超时控制
+- pytest-mock (`>=3.11.0`) - Mock 和 fixture 支持
+- pytest-cov (`>=4.1.0`) - 测试覆盖率报告
 
-**HTTP/Networking:**
-- requests (`>=2.31.0`) - HTTP client for Feishu API calls and external integrations
+**HTTP/网络:**
+- requests (`>=2.31.0`) - 用于飞书 API 调用和外部集成的 HTTP 客户端
 
-## Key Dependencies
+## 关键依赖
 
-**Critical:**
-- `anthropic>=0.39.0` - Provides Anthropic client for LLM inference via MiniMax or Claude APIs
-  - Supports custom base_url for API routing
-  - Tool calling for agentic workflows
-  - Message streaming support
+**核心依赖:**
+- `anthropic>=0.39.0` - 通过 MiniMax 或 Claude API 提供 Anthropic 客户端进行 LLM 推理
+  - 支持自定义 base_url 进行 API 路由
+  - 支持工具调用的 agentic 工作流
+  - 支持消息流式传输
 
-- `requests>=2.31.0` - HTTP requests to Feishu (飞书) APIs
-  - Token refresh and caching
-  - Markdown to Feishu Block format conversion
-  - Error handling with retry logic
+- `requests>=2.31.0` - 向飞书 API 发送 HTTP 请求
+  - Token 刷新和缓存
+  - Markdown 到飞书 Block 格式转换
+  - 带重试逻辑的错误处理
 
-- `claude_agent_sdk` - Local agent SDK for structured tool calling
-  - Hook system for logging (pre_tool_use, post_tool_use, stop_hook, user_prompt_submit_hook)
-  - Supports NotebookLM tool integration
-  - Metrics collection (tokens, runtime, tool calls)
+- `claude_agent_sdk` - 用于结构化工具调用的本地 Agent SDK
+  - 日志记录的钩子系统(pre_tool_use, post_tool_use, stop_hook, user_prompt_submit_hook)
+  - 支持 NotebookLM 工具集成
+  - 指标收集(tokens, runtime, tool calls)
 
-- `python-dotenv>=1.0.0` - Configuration management
-  - Loads .env file for secrets and model configuration
-  - Environment variable defaults
+- `python-dotenv>=1.0.0` - 配置管理
+  - 从 .env 文件加载密钥和模型配置
+  - 环境变量默认值
 
-**Testing Infrastructure:**
-- `pytest>=7.4.0` - Main test runner
-- `pytest-timeout>=2.1.0` - Timeout enforcement
-- `pytest-mock>=3.11.0` - Mocking fixtures and utilities
-- `pytest-cov>=4.1.0` - Coverage analysis
+**测试基础设施:**
+- `pytest>=7.4.0` - 主测试运行器
+- `pytest-timeout>=2.1.0` - 超时强制执行
+- `pytest-mock>=3.11.0` - Mock fixtures 和工具
+- `pytest-cov>=4.1.0` - 覆盖率分析
 
-## Configuration
+## 配置
 
-**Environment:**
-Environment variables loaded from `.env` file using `python-dotenv`:
+**环境变量:**
+使用 `python-dotenv` 从 `.env` 文件加载环境变量:
 
-**LLM Configuration:**
-- `ANTHROPIC_API_KEY` - API key for MiniMax or Claude API
-- `ANTHROPIC_BASE_URL` - Custom API endpoint (e.g., `https://api.minimaxi.com/anthropic` for MiniMax)
-- `ANTHROPIC_MODEL` - Model identifier (default: `MiniMax-M2.1`)
+**LLM 配置:**
+- `ANTHROPIC_API_KEY` - MiniMax 或 Claude API 的 API 密钥
+- `ANTHROPIC_BASE_URL` - 自定义 API 端点(例如 MiniMax 使用 `https://api.minimaxi.com/anthropic`)
+- `ANTHROPIC_MODEL` - 模型标识符(默认: `MiniMax-M2.1`)
 
-**NotebookLM Configuration:**
-- `NOTEBOOK_URL` - Full URL to NotebookLM notebook
-- `NOTEBOOK_ID` - Notebook identifier for API calls
-- `NOTEBOOK_NAME` - Display name for notebook (default: `my_knowledge`)
+**NotebookLM 配置:**
+- `NOTEBOOK_URL` - NotebookLM 笔记本的完整 URL
+- `NOTEBOOK_ID` - 用于 API 调用的笔记本标识符
+- `NOTEBOOK_NAME` - 笔记本显示名称(默认: `my_knowledge`)
 
-**Feishu Integration:**
-- `FEISHU_APP_ID` - Feishu application ID for authentication
-- `FEISHU_APP_SECRET` - Feishu application secret
-- `FEISHU_TENANT_DOMAIN` - Tenant domain for document URL construction
-- `FEISHU_FOLDER_TOKEN` - Cloud document folder token
-- `FEISHU_BITABLE_APP_TOKEN` - Multi-dimensional table app token
-- `FEISHU_BITABLE_TABLE_ID` - Specific table ID for record insertion
+**飞书集成:**
+- `FEISHU_APP_ID` - 用于认证的飞书应用 ID
+- `FEISHU_APP_SECRET` - 飞书应用密钥
+- `FEISHU_TENANT_DOMAIN` - 用于构建文档 URL 的租户域名
+- `FEISHU_FOLDER_TOKEN` - 云文档文件夹 token
+- `FEISHU_BITABLE_APP_TOKEN` - 多维表格应用 token
+- `FEISHU_BITABLE_TABLE_ID` - 用于记录插入的特定表 ID
 
-**Agent Configuration:**
-- `USE_AGENT_SDK` - Feature flag to enable/disable Claude Agent SDK mode (default: `true`)
-- `LOG_MAX_RESULT_LENGTH` - Tool result truncation length (0 or empty = no truncation)
-- `PROMPT_VERSION` - Prompt file version to use (e.g., `V1`, `V2` from `write_prompt/` directory)
+**Agent 配置:**
+- `USE_AGENT_SDK` - 启用/禁用 Claude Agent SDK 模式的功能标志(默认: `true`)
+- `LOG_MAX_RESULT_LENGTH` - 工具结果截断长度(0 或空 = 不截断)
+- `PROMPT_VERSION` - 要使用的提示词文件版本(例如 `write_prompt/` 目录中的 `V1`, `V2`)
 
-**Build:**
+**构建:**
 - pytest.ini: `testpaths = tests`, `minversion = 7.0`
-- No build system (pure Python, no compilation)
+- 无构建系统(纯 Python,无需编译)
 
-## Platform Requirements
+## 平台要求
 
-**Development:**
-- macOS or Linux (uses subprocess for NotebookLM skill execution)
-- Python 3.13.3 or compatible
-- Virtual environment (recommended)
-- Git (for NotebookLM skill installation: `~/.claude/skills/notebooklm`)
+**开发环境:**
+- macOS 或 Linux(使用 subprocess 执行 NotebookLM skill)
+- Python 3.13.3 或兼容版本
+- 虚拟环境(推荐)
+- Git(用于 NotebookLM skill 安装: `~/.claude/skills/notebooklm`)
 
-**Production:**
+**生产环境:**
 - Python 3.13.3+
-- Standard HTTP access to external APIs
-  - Anthropic/MiniMax API endpoint
-  - Feishu (飞书) open APIs (`https://open.feishu.cn/open-apis/`)
-  - Google NotebookLM (via local skill integration)
-- Access to local NotebookLM skill installation (`~/.claude/skills/notebooklm/`)
+- 标准 HTTP 访问外部 API
+  - Anthropic/MiniMax API 端点
+  - 飞书开放平台 API (`https://open.feishu.cn/open-apis/`)
+  - Google NotebookLM(通过本地 skill 集成)
+- 访问本地 NotebookLM skill 安装(`~/.claude/skills/notebooklm/`)
 
-**External Service Dependencies:**
-- Feishu workspace with cloud documents and multi-dimensional tables enabled
-- Feishu application credentials with appropriate permissions
-- NotebookLM notebook created and authenticated
-- Anthropic/MiniMax API account with quota
+**外部服务依赖:**
+- 启用了云文档和多维表格的飞书工作区
+- 具有适当权限的飞书应用凭据
+- 已创建和认证的 NotebookLM 笔记本
+- 具有配额的 Anthropic/MiniMax API 账户
 
 ---
 
-*Stack analysis: 2026-01-27*
+*技术栈分析: 2026-01-27*

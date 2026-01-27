@@ -1,30 +1,30 @@
-# Codebase Structure
+# 代码库结构
 
-**Analysis Date:** 2026-01-27
+**分析日期:** 2026-01-27
 
-## Directory Layout
+## 目录布局
 
 ```
 wechat-writer-agent/
-├── src/                           # Core library code
-│   ├── __init__.py               # Package marker
-│   ├── main.py                   # Pipeline orchestrator (227 lines)
-│   ├── models.py                 # Data contracts
-│   ├── modules/                  # Feature modules
-│   │   ├── __init__.py          # Module imports
-│   │   ├── retrieval.py         # NotebookLM integration (124 lines)
-│   │   ├── generator.py         # Article generation (393 lines)
-│   │   ├── agent_sdk.py         # Claude SDK wrapper (250 lines)
-│   │   ├── feishu_doc.py        # Feishu document API (438 lines)
-│   │   └── feishu_table.py      # Feishu multitable API (231 lines)
-│   ├── hooks/                    # Instrumentation
+├── src/                           # 核心库代码
+│   ├── __init__.py               # 包标记
+│   ├── main.py                   # 管道编排器(227 行)
+│   ├── models.py                 # 数据契约
+│   ├── modules/                  # 功能模块
+│   │   ├── __init__.py          # 模块导入
+│   │   ├── retrieval.py         # NotebookLM 集成(124 行)
+│   │   ├── generator.py         # 文章生成(393 行)
+│   │   ├── agent_sdk.py         # Claude SDK 包装器(250 行)
+│   │   ├── feishu_doc.py        # 飞书文档 API(438 行)
+│   │   └── feishu_table.py      # 飞书多维表格 API(231 行)
+│   ├── hooks/                    # 仪器化
 │   │   ├── __init__.py
-│   │   ├── logging_hooks.py     # SDK lifecycle hooks (126 lines)
-│   │   └── log_generator.py     # Markdown log generation (169 lines)
-│   └── utils/                    # Utilities
+│   │   ├── logging_hooks.py     # SDK 生命周期钩子(126 行)
+│   │   └── log_generator.py     # Markdown 日志生成(169 行)
+│   └── utils/                    # 工具函数
 │       ├── __init__.py
-│       └── temperature.py        # Parameter validation (30 lines)
-├── tests/                        # Test suite
+│       └── temperature.py        # 参数验证(30 行)
+├── tests/                        # 测试套件
 │   ├── test_setup.py
 │   ├── test_generator.py
 │   ├── test_generator_sdk.py
@@ -33,189 +33,189 @@ wechat-writer-agent/
 │   ├── test_feishu_doc.py
 │   ├── test_feishu_table_real.py
 │   ├── test_writer_agent.py
-│   └── ... (14+ test files)
-├── docs/                         # Documentation
+│   └── ... (14+ 测试文件)
+├── docs/                         # 文档
 │   ├── README.md
 │   ├── skills.md
 │   ├── agent_logs.md
-│   └── ... (project docs)
-├── write_prompt/                 # Prompt versions
+│   └── ... (项目文档)
+├── write_prompt/                 # 提示词版本
 │   ├── V1.md
 │   └── V2_example.md
-├── logs/                         # Runtime logs (generated)
-├── .planning/                    # GSD planning docs
-├── .venv/                        # Python virtual environment
-├── writer_agent.py               # High-level writer agent API (232 lines)
-├── main.py                       # CLI entry point (49 lines)
-├── cli.py                        # Additional CLI tools
-├── notebooklm_tool.py           # NotebookLM tool wrapper
-├── pytest.ini                    # Test configuration
-├── requirements.txt              # Python dependencies
-├── .env.example                  # Environment template
-└── .gitignore                    # Git ignore rules
+├── logs/                         # 运行时日志(生成)
+├── .planning/                    # GSD 规划文档
+├── .venv/                        # Python 虚拟环境
+├── writer_agent.py               # 高级 writer agent API(232 行)
+├── main.py                       # CLI 入口点(49 行)
+├── cli.py                        # 额外 CLI 工具
+├── notebooklm_tool.py           # NotebookLM 工具包装器
+├── pytest.ini                    # 测试配置
+├── requirements.txt              # Python 依赖
+├── .env.example                  # 环境变量模板
+└── .gitignore                    # Git 忽略规则
 ```
 
-## Directory Purposes
+## 目录用途
 
 **src/**
-- Purpose: Core library containing production code
-- Contains: Python modules organized by feature
-- Key files: `main.py` (orchestrator), `models.py` (contracts)
+- 用途: 包含生产代码的核心库
+- 包含: 按功能组织的 Python 模块
+- 关键文件: `main.py`(编排器)、`models.py`(契约)
 
 **src/modules/**
-- Purpose: Feature implementations
-- Contains: Retrieval, generation, Feishu integrations, SDK wrapper
-- Key files: `generator.py` (largest module), `feishu_doc.py` (Feishu API client)
+- 用途: 功能实现
+- 包含: 检索、生成、飞书集成、SDK 包装器
+- 关键文件: `generator.py`(最大模块)、`feishu_doc.py`(飞书 API 客户端)
 
 **src/hooks/**
-- Purpose: Instrumentation for SDK lifecycle events
-- Contains: Hook implementations and log generation
-- Key files: `logging_hooks.py` (hook definitions), `log_generator.py` (markdown output)
+- 用途: SDK 生命周期事件的仪器化
+- 包含: 钩子实现和日志生成
+- 关键文件: `logging_hooks.py`(钩子定义)、`log_generator.py`(markdown 输出)
 
 **src/utils/**
-- Purpose: Shared utilities and validators
-- Contains: Temperature validation function
-- Key files: `temperature.py` (parameter validation)
+- 用途: 共享工具和验证器
+- 包含: 温度验证函数
+- 关键文件: `temperature.py`(参数验证)
 
 **tests/**
-- Purpose: Unit and integration tests
-- Contains: Test files for each module
-- Key files: `test_generator.py`, `test_generator_sdk.py`, `test_agent_sdk_runner.py`
+- 用途: 单元和集成测试
+- 包含: 每个模块的测试文件
+- 关键文件: `test_generator.py`、`test_generator_sdk.py`、`test_agent_sdk_runner.py`
 
 **docs/**
-- Purpose: Project documentation
-- Contains: README, guides, logs
-- Key files: `README.md` (main docs), `agent_logs.md` (logging guide)
+- 用途: 项目文档
+- 包含: README、指南、日志
+- 关键文件: `README.md`(主文档)、`agent_logs.md`(日志指南)
 
 **write_prompt/**
-- Purpose: Versioned system prompts
-- Contains: Prompt variations and examples
-- Key files: `V1.md` (current), `V2_example.md` (future)
+- 用途: 版本化的系统提示词
+- 包含: 提示词变体和示例
+- 关键文件: `V1.md`(当前)、`V2_example.md`(未来)
 
 **logs/**
-- Purpose: Runtime execution logs (generated at runtime)
-- Contains: Execution traces and metrics
-- Key files: Dynamically generated JSON/markdown logs
+- 用途: 运行时执行日志(在运行时生成)
+- 包含: 执行跟踪和指标
+- 关键文件: 动态生成的 JSON/markdown 日志
 
 **.planning/**
-- Purpose: GSD (Goal-Scheduled Delivery) planning documents
-- Contains: Architecture, structure, conventions, concerns analysis
-- Key files: `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `CONCERNS.md`
+- 用途: GSD(目标计划交付)规划文档
+- 包含: 架构、结构、约定、问题分析
+- 关键文件: `ARCHITECTURE.md`、`STRUCTURE.md`、`CONVENTIONS.md`、`CONCERNS.md`
 
-## Key File Locations
+## 关键文件位置
 
-**Entry Points:**
-- `main.py` (project root): CLI entry point with environment loading
-- `writer_agent.py`: High-level API for WechatWriterAgent class
-- `src/main.py`: Pipeline function for programmatic use
+**入口点:**
+- `main.py`(项目根目录): 带环境加载的 CLI 入口点
+- `writer_agent.py`: WechatWriterAgent 类的高级 API
+- `src/main.py`: 用于程序化使用的管道函数
 
-**Configuration:**
-- `.env.example`: Template for environment variables
-- `pytest.ini`: Test runner configuration
-- `requirements.txt`: Python package dependencies
+**配置:**
+- `.env.example`: 环境变量模板
+- `pytest.ini`: 测试运行器配置
+- `requirements.txt`: Python 包依赖
 
-**Core Logic:**
-- `src/modules/generator.py`: Article generation with dual paths (SDK vs Anthropic)
-- `src/modules/agent_sdk.py`: Claude Agent SDK wrapper and metrics collection
-- `src/modules/retrieval.py`: NotebookLM subprocess integration
-- `src/modules/feishu_doc.py`: Feishu document creation and Markdown conversion
-- `src/modules/feishu_table.py`: Feishu multidimensional table operations
+**核心逻辑:**
+- `src/modules/generator.py`: 带双路径的文章生成(SDK vs Anthropic)
+- `src/modules/agent_sdk.py`: Claude Agent SDK 包装器和指标收集
+- `src/modules/retrieval.py`: NotebookLM 子进程集成
+- `src/modules/feishu_doc.py`: 飞书文档创建和 Markdown 转换
+- `src/modules/feishu_table.py`: 飞书多维表格操作
 
-**Models & Contracts:**
-- `src/models.py`: Dataclasses for SearchResult, Article, DocResult, PipelineResult
-- `src/modules/agent_sdk.py`: AgentRunMetrics dataclass for SDK metrics
+**模型和契约:**
+- `src/models.py`: SearchResult、Article、DocResult、PipelineResult 的 Dataclasses
+- `src/modules/agent_sdk.py`: SDK 指标的 AgentRunMetrics dataclass
 
-**Testing:**
-- `tests/test_generator.py`: Generator module tests
-- `tests/test_generator_sdk.py`: SDK path tests
-- `tests/test_feishu_doc.py`: Feishu integration tests
-- `tests/test_agent_sdk_runner.py`: AgentSDKRunner tests
-- `tests/test_log_generator.py`: Log generation tests
+**测试:**
+- `tests/test_generator.py`: Generator 模块测试
+- `tests/test_generator_sdk.py`: SDK 路径测试
+- `tests/test_feishu_doc.py`: 飞书集成测试
+- `tests/test_agent_sdk_runner.py`: AgentSDKRunner 测试
+- `tests/test_log_generator.py`: 日志生成测试
 
-## Naming Conventions
+## 命名约定
 
-**Files:**
-- `snake_case.py`: All Python files use snake_case
-- Test files: `test_<module>.py` (e.g., `test_generator.py`)
-- Prompt files: Uppercase version identifier (e.g., `V1.md`, `V2_example.md`)
-- Documentation: `UPPERCASE.md` for major docs, `lowercase.md` for supporting docs
+**文件:**
+- `snake_case.py`: 所有 Python 文件使用 snake_case
+- 测试文件: `test_<模块>.py`(例如 `test_generator.py`)
+- 提示词文件: 大写版本标识符(例如 `V1.md`、`V2_example.md`)
+- 文档: 主要文档用 `UPPERCASE.md`,支持文档用 `lowercase.md`
 
-**Directories:**
-- `snake_case/`: All directories use snake_case
-- Feature modules: `src/modules/` for business logic
-- Test directory: `tests/` in project root
-- Documentation: `docs/` in project root
-- Planning: `.planning/codebase/` for GSD analysis
+**目录:**
+- `snake_case/`: 所有目录使用 snake_case
+- 功能模块: `src/modules/` 用于业务逻辑
+- 测试目录: 项目根目录的 `tests/`
+- 文档: 项目根目录的 `docs/`
+- 规划: GSD 分析的 `.planning/codebase/`
 
-**Functions & Classes:**
-- Functions: `snake_case()` (e.g., `run_pipeline`, `search`, `create_doc`)
-- Classes: `PascalCase` (e.g., `WechatWriterAgent`, `AgentSDKRunner`, `FeishuTokenManager`)
-- Dataclasses: `PascalCase` (e.g., `Article`, `SearchResult`, `AgentRunMetrics`)
-- Constants: `UPPER_SNAKE_CASE` (e.g., `REQUIRED_FIELDS`, `VALID_STATUSES`)
+**函数和类:**
+- 函数: `snake_case()`(例如 `run_pipeline`、`search`、`create_doc`)
+- 类: `PascalCase`(例如 `WechatWriterAgent`、`AgentSDKRunner`、`FeishuTokenManager`)
+- Dataclasses: `PascalCase`(例如 `Article`、`SearchResult`、`AgentRunMetrics`)
+- 常量: `UPPER_SNAKE_CASE`(例如 `REQUIRED_FIELDS`、`VALID_STATUSES`)
 
-**Modules:**
-- Function-based modules: Named after primary function (e.g., `retrieval.py::search()`)
-- Class-based modules: Named after primary class (e.g., `agent_sdk.py::AgentSDKRunner`)
-- Multi-feature modules: Named after feature (e.g., `feishu_doc.py` for Feishu docs)
+**模块:**
+- 基于函数的模块: 以主要函数命名(例如 `retrieval.py::search()`)
+- 基于类的模块: 以主要类命名(例如 `agent_sdk.py::AgentSDKRunner`)
+- 多功能模块: 以功能命名(例如 `feishu_doc.py` 用于飞书文档)
 
-## Where to Add New Code
+## 新代码添加位置
 
-**New Feature (e.g., WeChat Integration):**
-- Primary code: `src/modules/wechat_api.py` (parallel to feishu_doc.py)
-- Tests: `tests/test_wechat_api.py`
-- Update: `src/modules/__init__.py` to export new module
-- Integration point: `src/main.py` orchestrator (add stage 5)
+**新功能(例如微信集成):**
+- 主要代码: `src/modules/wechat_api.py`(与 feishu_doc.py 并列)
+- 测试: `tests/test_wechat_api.py`
+- 更新: `src/modules/__init__.py` 以导出新模块
+- 集成点: `src/main.py` 编排器(添加阶段 5)
 
-**New Utility/Validator:**
-- Implementation: `src/utils/<name>.py`
-- Tests: `tests/test_<name>.py`
-- Update: `src/utils/__init__.py` if part of public API
+**新工具/验证器:**
+- 实现: `src/utils/<名称>.py`
+- 测试: `tests/test_<名称>.py`
+- 更新: 如果是公共 API 的一部分,更新 `src/utils/__init__.py`
 
-**New Hook/Instrumentation:**
-- Implementation: `src/hooks/<feature>_hooks.py`
-- Tests: `tests/test_<feature>_hooks.py`
-- Update: `src/hooks/__init__.py` for exports
-- Integration: Register in `AgentSDKRunner._register_hooks()`
+**新钩子/仪器:**
+- 实现: `src/hooks/<功能>_hooks.py`
+- 测试: `tests/test_<功能>_hooks.py`
+- 更新: `src/hooks/__init__.py` 用于导出
+- 集成: 在 `AgentSDKRunner._register_hooks()` 中注册
 
-**New Test:**
-- Location: `tests/test_<module>.py` (mirrors `src/` structure)
-- Format: Use pytest with fixtures from conftest.py (if exists)
-- Run: `pytest tests/test_<module>.py -v`
+**新测试:**
+- 位置: `tests/test_<模块>.py`(镜像 `src/` 结构)
+- 格式: 使用 pytest,从 conftest.py 使用 fixtures(如果存在)
+- 运行: `pytest tests/test_<模块>.py -v`
 
-**New Documentation:**
-- Major docs: `.planning/codebase/<UPPERCASE>.md` (GSD analysis only)
-- Project docs: `docs/<lowercase>.md`
-- Run guides: `docs/<feature>_setup.md`
+**新文档:**
+- 主要文档: `.planning/codebase/<UPPERCASE>.md`(仅 GSD 分析)
+- 项目文档: `docs/<lowercase>.md`
+- 运行指南: `docs/<功能>_setup.md`
 
-## Special Directories
+## 特殊目录
 
 **logs/**
-- Purpose: Runtime execution logs and metrics
-- Generated: Yes (created at runtime)
-- Committed: No (in .gitignore)
-- Contents: JSON metrics files, markdown logs from LogDocumentGenerator
-- Cleanup: Manual (old logs can be deleted safely)
+- 用途: 运行时执行日志和指标
+- 生成: 是(在运行时创建)
+- 提交: 否(在 .gitignore 中)
+- 内容: JSON 指标文件,来自 LogDocumentGenerator 的 markdown 日志
+- 清理: 手动(可以安全删除旧日志)
 
 **.planning/codebase/**
-- Purpose: GSD orchestrator analysis documents
-- Generated: No (manually created by /gsd:map-codebase)
-- Committed: Yes (tracks architectural decisions)
-- Contents: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, CONCERNS.md
-- Edit: Update when architecture changes
+- 用途: GSD 编排器分析文档
+- 生成: 否(通过 /gsd:map-codebase 手动创建)
+- 提交: 是(跟踪架构决策)
+- 内容: ARCHITECTURE.md、STRUCTURE.md、CONVENTIONS.md、CONCERNS.md
+- 编辑: 当架构更改时更新
 
 **.venv/**
-- Purpose: Python virtual environment
-- Generated: Yes (created by `python -m venv .venv`)
-- Committed: No (in .gitignore)
-- Cleanup: Safe to delete; regenerate with `python -m venv .venv && pip install -r requirements.txt`
+- 用途: Python 虚拟环境
+- 生成: 是(通过 `python -m venv .venv` 创建)
+- 提交: 否(在 .gitignore 中)
+- 清理: 可以安全删除;使用 `python -m venv .venv && pip install -r requirements.txt` 重新生成
 
 **write_prompt/**
-- Purpose: Versioned system prompts for agent
-- Generated: No (maintained manually)
-- Committed: Yes (prompt versions are architectural decisions)
-- Contents: Markdown files with different prompt strategies
-- Usage: Loaded by generator.py via `_get_system_prompt(version)`
+- 用途: agent 的版本化系统提示词
+- 生成: 否(手动维护)
+- 提交: 是(提示词版本是架构决策)
+- 内容: 具有不同提示词策略的 Markdown 文件
+- 使用: 通过 generator.py 的 `_get_system_prompt(version)` 加载
 
 ---
 
-*Structure analysis: 2026-01-27*
+*结构分析: 2026-01-27*
