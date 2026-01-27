@@ -61,6 +61,41 @@ def _validate_field_values(fields: dict) -> None:
         raise ValueError(f"无效的状态值: {status}，有效值为: {', '.join(VALID_STATUSES)}")
 
 
+def _validate_optional_fields(fields: dict) -> None:
+    """
+    验证可选字段（新增的4个日志字段）
+
+    Args:
+        fields: 字段字典
+
+    Raises:
+        ValueError: 字段类型错误
+    """
+    # 运行时长（秒）- 数字类型（int或float）
+    if "运行时长（秒）" in fields:
+        value = fields["运行时长（秒）"]
+        if value is not None and not isinstance(value, (int, float)):
+            raise ValueError("运行时长（秒）必须是数字类型")
+
+    # Token使用量 - 整数类型
+    if "Token使用量" in fields:
+        value = fields["Token使用量"]
+        if value is not None and not isinstance(value, int):
+            raise ValueError("Token使用量必须是整数类型")
+
+    # 工具调用次数 - 整数类型
+    if "工具调用次数" in fields:
+        value = fields["工具调用次数"]
+        if value is not None and not isinstance(value, int):
+            raise ValueError("工具调用次数必须是整数类型")
+
+    # 日志文档URL - 字符串类型
+    if "日志文档URL" in fields:
+        value = fields["日志文档URL"]
+        if value is not None and not isinstance(value, str):
+            raise ValueError("日志文档URL必须是字符串类型")
+
+
 def _insert_record_api(
     access_token: str,
     app_token: str,
@@ -165,6 +200,9 @@ def insert_record(fields: dict) -> str:
     _validate_required_fields(fields)
     _validate_field_types(fields)
     _validate_field_values(fields)
+
+    # 新增：验证可选字段（日志相关字段）
+    _validate_optional_fields(fields)
 
     # 2. 读取环境变量
     app_id = os.getenv("FEISHU_APP_ID")
