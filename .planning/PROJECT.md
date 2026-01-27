@@ -8,6 +8,15 @@
 
 Agent 能在写作过程中智能决策何时查询知识库，实现真正的"知识驱动写作"——不是简单的素材堆砌，而是基于个人知识沉淀的深度内容创作。
 
+## Current Milestone: v0.1 Agent SDK 工具调用修复
+
+**Goal:** 修复 Agent SDK 与 NotebookLM 工具的集成,使 Agent 能够在生成过程中自动调用检索工具
+
+**Target features:**
+- Agent SDK 能正确调用 NotebookLM 工具(tool_call_count > 0)
+- 日志系统能正确记录工具调用指标
+- 验证工具调用机制在实际生成场景中工作
+
 ## Requirements
 
 ### Validated
@@ -94,4 +103,4 @@ NotebookLM 中存储混合知识库：
 | 飞书作为输出平台 | 团队协作友好，支持文档和数据表格 | ✓ Good |
 
 ---
-*Last updated: 2026-01-27 after initialization*
+*Last updated: 2026-01-27 after milestone v0.1 initialization*
