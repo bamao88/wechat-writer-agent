@@ -1,9 +1,14 @@
 """编排层 - 内容生产流水线"""
 
+import os
 import time
+import asyncio
 from typing import Optional
 from .modules import retrieval, generator, feishu_doc, feishu_table
 from .models import PipelineResult
+
+# 特性开关：是否使用Claude Agent SDK
+USE_AGENT_SDK = os.getenv("USE_AGENT_SDK", "false").lower() == "true"
 
 
 def run_pipeline(
@@ -87,18 +92,40 @@ def run_pipeline(
     print("✍️  阶段 2/4: 生成文章")
     print(f"{'—'*60}")
 
-    article = generator.generate(
-        topic=topic,
-        search_results=search_results,
-        api_key=api_key,
-        notebook_id=notebook_id,
-        notebook_url=notebook_url
-    )
+    metrics_dict = None  # 初始化metrics（仅SDK模式有值）
+
+    if USE_AGENT_SDK:
+        # 新路径：使用Claude Agent SDK（带hooks日志）
+        print("🔧 使用 Claude Agent SDK（带hooks日志记录）")
+        article, metrics_dict = asyncio.run(generator.generate_with_sdk(
+            topic=topic,
+            search_results=search_results,
+            api_key=api_key,
+            notebook_id=notebook_id,
+            notebook_url=notebook_url
+        ))
+    else:
+        # 旧路径：使用原有Anthropic SDK
+        print("🔧 使用 Anthropic SDK（原有实现）")
+        article = generator.generate(
+            topic=topic,
+            search_results=search_results,
+            api_key=api_key,
+            notebook_id=notebook_id,
+            notebook_url=notebook_url
+        )
 
     print(f"✅ 文章生成完成")
     print(f"   标题: {article.title}")
     print(f"   字数: {len(article.content)} 字符")
     print(f"   素材: {article.source_summary}")
+
+    # 如果有metrics，打印统计信息
+    if metrics_dict:
+        print(f"\n📊 运行统计:")
+        print(f"   运行时长: {metrics_dict['runtime_seconds']:.2f} 秒")
+        print(f"   Token使用: {metrics_dict['total_tokens']} tokens")
+        print(f"   工具调用: {metrics_dict['tool_call_count']} 次")
 
     # 3. 飞书云文档阶段（可选）
     print(f"\n{'—'*60}")
@@ -140,12 +167,41 @@ def run_pipeline(
     record_id = None
     if enable_feishu and doc_result:
         try:
-            record_id = feishu_table.insert_record({
+            # 基础字段
+            record_fields = {
                 "选题名称": topic,
                 "文章链接": doc_result.doc_url,
                 "创建时间": int(time.time() * 1000),
                 "状态": "草稿"
-            })
+            }
+
+            # 如果使用SDK且有metrics，上传日志并添加字段
+            if metrics_dict and folder_token:
+                print("📄 上传运行日志到飞书...")
+
+                # 上传日志文档
+                if metrics_dict.get('log_markdown'):
+                    try:
+                        log_doc_result = feishu_doc.create_doc(
+                            title=f"运行日志-{topic}",
+                            content=metrics_dict['log_markdown'],
+                            folder_token=folder_token
+                        )
+                        record_fields["日志文档URL"] = log_doc_result.doc_url
+                        print(f"   ✅ 日志文档: {log_doc_result.doc_url}")
+                    except Exception as e:
+                        print(f"   ⚠️  日志文档上传失败: {e}")
+                        print(f"   ⏭️  继续执行，日志字段留空")
+
+                # 添加metrics字段
+                record_fields["运行时长（秒）"] = round(metrics_dict['runtime_seconds'], 2)
+                record_fields["Token使用量"] = metrics_dict['total_tokens']
+                record_fields["工具调用次数"] = metrics_dict['tool_call_count']
+
+                print(f"   📊 运行指标已添加到记录")
+
+            # 插入记录
+            record_id = feishu_table.insert_record(record_fields)
             print(f"✅ 记录插入成功: {record_id}")
         except NotImplementedError:
             print("⚠️  飞书多维表格功能暂未实现，跳过此步骤")
