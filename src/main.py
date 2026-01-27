@@ -170,7 +170,7 @@ def run_pipeline(
             # 基础字段
             record_fields = {
                 "选题名称": topic,
-                "文章链接": doc_result.doc_url,
+                "文章链接": doc_result.doc_url,  # 飞书URL字段用纯字符串
                 "创建时间": int(time.time() * 1000),
                 "状态": "草稿"
             }
@@ -187,16 +187,17 @@ def run_pipeline(
                             content=metrics_dict['log_markdown'],
                             folder_token=folder_token
                         )
+                        # 飞书URL字段用纯字符串
                         record_fields["日志文档URL"] = log_doc_result.doc_url
                         print(f"   ✅ 日志文档: {log_doc_result.doc_url}")
                     except Exception as e:
                         print(f"   ⚠️  日志文档上传失败: {e}")
                         print(f"   ⏭️  继续执行，日志字段留空")
 
-                # 添加metrics字段
-                record_fields["运行时长（秒）"] = round(metrics_dict['runtime_seconds'], 2)
-                record_fields["Token使用量"] = metrics_dict['total_tokens']
-                record_fields["工具调用次数"] = metrics_dict['tool_call_count']
+                # 添加metrics字段（飞书中这些字段是文本类型，需转换为字符串）
+                record_fields["运行时长（秒）"] = str(round(metrics_dict['runtime_seconds'], 2))
+                record_fields["Token使用量"] = str(metrics_dict['total_tokens'])
+                record_fields["工具调用次数"] = str(metrics_dict['tool_call_count'])
 
                 print(f"   📊 运行指标已添加到记录")
 

@@ -71,25 +71,25 @@ def _validate_optional_fields(fields: dict) -> None:
     Raises:
         ValueError: 字段类型错误
     """
-    # 运行时长（秒）- 数字类型（int或float）
+    # 运行时长（秒）- 数字或字符串（飞书中是文本类型）
     if "运行时长（秒）" in fields:
         value = fields["运行时长（秒）"]
-        if value is not None and not isinstance(value, (int, float)):
-            raise ValueError("运行时长（秒）必须是数字类型")
+        if value is not None and not isinstance(value, (int, float, str)):
+            raise ValueError("运行时长（秒）必须是数字或字符串类型")
 
-    # Token使用量 - 整数类型
+    # Token使用量 - 整数或字符串（飞书中是文本类型）
     if "Token使用量" in fields:
         value = fields["Token使用量"]
-        if value is not None and not isinstance(value, int):
-            raise ValueError("Token使用量必须是整数类型")
+        if value is not None and not isinstance(value, (int, str)):
+            raise ValueError("Token使用量必须是整数或字符串类型")
 
-    # 工具调用次数 - 整数类型
+    # 工具调用次数 - 整数或字符串（飞书中是文本类型）
     if "工具调用次数" in fields:
         value = fields["工具调用次数"]
-        if value is not None and not isinstance(value, int):
-            raise ValueError("工具调用次数必须是整数类型")
+        if value is not None and not isinstance(value, (int, str)):
+            raise ValueError("工具调用次数必须是整数或字符串类型")
 
-    # 日志文档URL - 字符串类型
+    # 日志文档URL - 字符串
     if "日志文档URL" in fields:
         value = fields["日志文档URL"]
         if value is not None and not isinstance(value, str):
@@ -149,7 +149,9 @@ def _insert_record_api(
                     error_data = response.json()
                     error_msg = error_data.get("msg", "未知错误")
                     raise RuntimeError(f"插入记录失败，HTTP状态码: {response.status_code}, 错误信息: {error_msg}")
-                except:
+                except Exception as e:
+                    if "插入记录失败" in str(e):
+                        raise
                     raise RuntimeError(f"插入记录失败，HTTP状态码: {response.status_code}")
 
             data = response.json()
