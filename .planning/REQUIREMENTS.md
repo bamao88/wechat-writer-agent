@@ -9,17 +9,17 @@
 
 ### 工具注册配置
 
-- [ ] **TOOL-01**: Agent SDK 正确配置 `setting_sources` 参数以启用 Skill 加载
-- [ ] **TOOL-02**: Agent SDK 使用 `allowed_tools` 参数(不是 `tools`)注册 NotebookLM 工具
-- [ ] **TOOL-03**: 添加 `claude-agent-sdk>=0.8.0` 到项目依赖
-- [ ] **TOOL-04**: SDK 启动时能成功发现并注册 NotebookLM 工具
+- [x] **TOOL-01**: Agent SDK 正确配置 `setting_sources` 参数以启用 Skill 加载
+- [x] **TOOL-02**: Agent SDK 使用 `allowed_tools` 参数(不是 `tools`)注册 NotebookLM 工具
+- [x] **TOOL-03**: 添加 `claude-agent-sdk>=0.1.23` 到项目依赖
+- [x] **TOOL-04**: SDK 启动时能成功发现并注册 NotebookLM 工具
 
 ### 工具调用验证
 
-- [ ] **VAL-01**: Agent 在需要知识时自动调用 NotebookLM 工具(不是手动调用)
-- [ ] **VAL-02**: 日志系统正确记录 tool_call_count > 0(不再是永远为 0)
-- [ ] **VAL-03**: 工具调用日志包含工具名称、调用时机、返回结果摘要
-- [ ] **VAL-04**: 可以通过测试验证工具确实被调用(不是假阳性)
+- [x] **VAL-01**: Agent 在需要知识时自动调用 NotebookLM 工具(不是手动调用)
+- [x] **VAL-02**: 日志系统正确记录 tool_call_count > 0(不再是永远为 0)
+- [x] **VAL-03**: 工具调用日志包含工具名称、调用时机、返回结果摘要
+- [x] **VAL-04**: 可以通过测试验证工具确实被调用(不是假阳性)
 
 ### 错误处理和日志
 
@@ -30,9 +30,9 @@
 
 ### MiniMax API 兼容性
 
-- [ ] **API-01**: 验证 MiniMax API 的 tool use 协议兼容性
-- [ ] **API-02**: 确认 MiniMax API 正确处理工具定义和调用
-- [ ] **API-03**: 测试 MiniMax API 的会话历史格式要求
+- [x] **API-01**: 验证 MiniMax API 的 tool use 协议兼容性
+- [x] **API-02**: 确认 MiniMax API 正确处理工具定义和调用
+- [x] **API-03**: 测试 MiniMax API 的会话历史格式要求
 - [ ] **API-04**: 记录 MiniMax API 与官方 Anthropic API 的差异
 
 ## v0.2 需求(后续里程碑)
@@ -68,17 +68,17 @@
 
 | 需求 | 阶段 | 状态 |
 |------|------|------|
-| TOOL-01 | 阶段 1 | Pending |
-| TOOL-02 | 阶段 1 | Pending |
-| TOOL-03 | 阶段 1 | Pending |
-| TOOL-04 | 阶段 1 | Pending |
-| API-01 | 阶段 1 | Pending |
-| API-02 | 阶段 1 | Pending |
-| VAL-01 | 阶段 2 | Pending |
-| VAL-02 | 阶段 2 | Pending |
-| VAL-03 | 阶段 2 | Pending |
-| VAL-04 | 阶段 2 | Pending |
-| API-03 | 阶段 2 | Pending |
+| TOOL-01 | 阶段 1 | Complete |
+| TOOL-02 | 阶段 1 | Complete |
+| TOOL-03 | 阶段 1 | Complete |
+| TOOL-04 | 阶段 1 | Complete |
+| API-01 | 阶段 1 | Complete |
+| API-02 | 阶段 1 | Complete |
+| VAL-01 | 阶段 2 | Complete |
+| VAL-02 | 阶段 2 | Complete |
+| VAL-03 | 阶段 2 | Complete |
+| VAL-04 | 阶段 2 | Complete |
+| API-03 | 阶段 2 | Complete |
 | ERR-01 | 阶段 3 | Pending |
 | ERR-02 | 阶段 3 | Pending |
 | ERR-03 | 阶段 3 | Pending |
@@ -92,4 +92,4 @@
 
 ---
 *需求定义于: 2026-01-27*
-*最后更新: 2026-01-28 路线图修订后*
+*最后更新: 2026-01-28 - 阶段 1-2 完成*
