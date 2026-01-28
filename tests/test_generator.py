@@ -702,32 +702,37 @@ class TestHelperFunctions:
 
     @patch('src.modules.generator.Anthropic')
     def test_generate_uses_validated_temperature(self, mock_anthropic_class):
-        """测试 generate 函数使用验证后的 temperature"""
+        """测试 generate 函数使用验证后的 temperature (MiniMax API)"""
         import os
+        from unittest.mock import patch
 
-        # Mock client
-        mock_client = MagicMock()
-        mock_anthropic_class.return_value = mock_client
+        # Set MiniMax base URL so temperature=0.0 gets converted to 0.001
+        with patch.dict(os.environ, {
+            'ANTHROPIC_BASE_URL': 'https://api.minimaxi.com/anthropic'
+        }):
+            # Mock client
+            mock_client = MagicMock()
+            mock_anthropic_class.return_value = mock_client
 
-        # Mock response
-        mock_response = MagicMock()
-        mock_response.stop_reason = "end_turn"
-        mock_content = MagicMock()
-        mock_content.text = "# 测试文章\n\n内容"
-        mock_response.content = [mock_content]
-        mock_client.messages.create.return_value = mock_response
+            # Mock response
+            mock_response = MagicMock()
+            mock_response.stop_reason = "end_turn"
+            mock_content = MagicMock()
+            mock_content.text = "# 测试文章\n\n内容"
+            mock_response.content = [mock_content]
+            mock_client.messages.create.return_value = mock_response
 
-        # 测试 temperature=0.0 被调整
-        article = generator.generate(
-            topic="测试",
-            search_results=[],
-            api_key="test-key",
-            temperature=0.0  # 应该被调整为 0.001
-        )
+            # 测试 temperature=0.0 被调整
+            article = generator.generate(
+                topic="测试",
+                search_results=[],
+                api_key="test-key",
+                temperature=0.0  # 应该被调整为 0.001 (MiniMax only)
+            )
 
-        # 验证实际调用参数
-        call_args = mock_client.messages.create.call_args
-        assert call_args[1]['temperature'] == 0.001
+            # 验证实际调用参数
+            call_args = mock_client.messages.create.call_args
+            assert call_args[1]['temperature'] == 0.001
 
     @patch('src.modules.generator.Anthropic')
     def test_generate_with_minimax_base_url(self, mock_anthropic_class):
@@ -756,10 +761,11 @@ class TestHelperFunctions:
                 model="MiniMax-M2.1"
             )
 
-            # 验证使用了 MiniMax base_url
+            # 验证使用了 MiniMax base_url with Authorization header
             mock_anthropic_class.assert_called_once_with(
                 api_key="minimax-key",
-                base_url='https://api.minimaxi.com/anthropic'
+                base_url='https://api.minimaxi.com/anthropic',
+                default_headers={'Authorization': 'Bearer minimax-key'}
             )
 
             assert article.title == "文章标题"
