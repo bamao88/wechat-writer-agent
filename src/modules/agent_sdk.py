@@ -28,6 +28,7 @@ class AgentRunMetrics:
     initial_user_message: Optional[str] = None  # 初始用户消息
     messages: List[Dict[str, Any]] = field(default_factory=list)  # 对话消息流
     conversation_history: List[Dict[str, Any]] = field(default_factory=list)  # 完整对话历史
+    tool_failures: List[Dict[str, Any]] = field(default_factory=list)  # 工具调用失败记录
 
     @property
     def runtime_seconds(self) -> float:
@@ -40,6 +41,30 @@ class AgentRunMetrics:
     def tool_call_count(self) -> int:
         """返回工具调用次数"""
         return len(self.tool_calls)
+
+    def add_tool_failure(
+        self,
+        tool_name: str,
+        tool_use_id: str,
+        error: str,
+        stderr: Optional[str] = None
+    ) -> None:
+        """
+        记录工具调用失败 (ERR-03: 优雅降级支持)
+
+        Args:
+            tool_name: 工具名称
+            tool_use_id: 工具调用唯一ID
+            error: 错误描述
+            stderr: 标准错误输出 (可选)
+        """
+        self.tool_failures.append({
+            "tool_name": tool_name,
+            "tool_use_id": tool_use_id,
+            "error": error,
+            "stderr": stderr,
+            "timestamp": time.time()
+        })
 
     def add_assistant_message(self, content_blocks: List[Dict[str, Any]], stop_reason: Optional[str] = None) -> None:
         """
@@ -368,5 +393,13 @@ class AgentSDKRunner:
 
         # 标记结束时间
         metrics.end_time = time.time()
+
+        # 记录工具失败后的降级事件 (ERR-03: 优雅降级)
+        if metrics.tool_failures:
+            print(f"[DEGRADATION] 检测到 {len(metrics.tool_failures)} 个工具调用失败:")
+            for failure in metrics.tool_failures:
+                print(f"  - 工具: {failure['tool_name']} | 错误: {failure['error']}")
+                if failure.get('stderr'):
+                    print(f"    Stderr: {failure['stderr'][:200]}...")
 
         return result_text, metrics
