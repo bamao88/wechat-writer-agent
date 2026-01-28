@@ -2,6 +2,7 @@
 
 import os
 import re
+from pathlib import Path
 from anthropic import Anthropic
 from typing import List, Optional, Dict, Any
 from ..models import SearchResult, Article
@@ -9,6 +10,36 @@ from . import retrieval
 from ..utils import validate_temperature
 from .agent_sdk import AgentSDKRunner
 from ..hooks.log_generator import LogDocumentGenerator
+
+
+def _create_anthropic_client(api_key: str) -> Anthropic:
+    """
+    Create Anthropic client with automatic API mode detection.
+
+    Official API: Uses standard authentication via api_key parameter only
+    MiniMax API: Uses custom base_url and Authorization header
+
+    Detection: If ANTHROPIC_BASE_URL contains 'minimaxi.com', use MiniMax mode
+    """
+    base_url = os.getenv("ANTHROPIC_BASE_URL")
+
+    if not base_url:
+        # Official Anthropic API: standard configuration
+        print("Using official Anthropic API")
+        return Anthropic(api_key=api_key)
+
+    if "minimaxi.com" in base_url:
+        # MiniMax API: requires custom Authorization header
+        print(f"Using MiniMax API: {base_url}")
+        return Anthropic(
+            api_key=api_key,
+            base_url=base_url,
+            default_headers={"Authorization": f"Bearer {api_key}"}
+        )
+
+    # Other third-party API
+    print(f"Using third-party API: {base_url}")
+    return Anthropic(api_key=api_key, base_url=base_url)
 
 
 def generate(
@@ -48,11 +79,7 @@ def generate(
     temperature = validate_temperature(temperature)
 
     # 创建客户端，支持自定义 base_url
-    base_url = os.getenv("ANTHROPIC_BASE_URL")
-    if base_url:
-        client = Anthropic(api_key=api_key, base_url=base_url)
-    else:
-        client = Anthropic(api_key=api_key)
+    client = _create_anthropic_client(api_key)
 
     # 构建系统提示词
     system_prompt = _get_system_prompt()
@@ -164,32 +191,77 @@ def generate(
     raise RuntimeError("达到最大轮次限制，生成未完成")
 
 
-def _get_system_prompt() -> str:
-    """获取系统提示词"""
-    return """你是一个专业的公众号文章写作助手。你的任务是帮助用户撰写高质量的公众号文章。
+def _get_system_prompt(version: Optional[str] = None) -> str:
+    """
+    获取系统提示词
 
-核心要求：
-1. **使用提供的素材**：
-   - 用户已经为你检索了相关素材，优先使用这些素材
-   - 如果提供的素材不够，可以使用 query_notebooklm 工具追加检索
+    从 write_prompt/ 目录读取 prompt 文件
 
-2. **保持个人风格**：
-   - 不要写成通识科普，要有明确的个人观点
-   - 结合具体经验和案例
-   - 保持真实性和独特性
+    Args:
+        version: Prompt 版本号（如 "V1", "V2"）
+                 如果为 None，则从环境变量 PROMPT_VERSION 读取
+                 默认使用 "V1"
 
-3. **文章结构**：
-   - 吸引人的标题和开头
-   - 清晰的逻辑结构
-   - 具体的案例支撑观点
-   - 启发性的结论
+    Returns:
+        Prompt 文本内容
 
-4. **输出格式**：
-   - 使用 Markdown 格式
-   - 标题使用 # 开头（一级标题）
-   - 正文分段清晰，适当使用二级标题（##）
+    优先级：
+    1. 参数 version
+    2. 环境变量 PROMPT_VERSION
+    3. 默认值 "V1"
 
-记住：主动判断是否需要追加检索，如果提供的素材已经足够，直接开始写作即可。"""
+    示例：
+        - _get_system_prompt()          → 使用 V1.md
+        - _get_system_prompt("V2")      → 使用 V2.md
+        - PROMPT_VERSION=V3 环境变量    → 使用 V3.md
+    """
+    # 确定使用哪个版本
+    if version is None:
+        version = os.getenv("PROMPT_VERSION", "V1")
+
+    prompt_dir = Path(__file__).parent.parent.parent / "write_prompt"
+    prompt_file = prompt_dir / f"{version}.md"
+
+    # 尝试读取指定版本的 prompt
+    try:
+        with open(prompt_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            print(f"✅ 使用 Prompt 版本: {version} ({prompt_file.name})")
+            return content
+    except FileNotFoundError:
+        print(f"⚠️ 警告：未找到 prompt 文件 {prompt_file}")
+
+        # 尝试降级到 V1
+        if version != "V1":
+            fallback_file = prompt_dir / "V1.md"
+            try:
+                with open(fallback_file, 'r', encoding='utf-8') as f:
+                    print(f"   降级使用: V1.md")
+                    return f.read()
+            except FileNotFoundError:
+                pass
+
+        # 最终降级：返回简化的默认 prompt
+        print("   使用内置默认 prompt")
+        return """你是一个专业的公众号文章写作助手。
+
+请基于提供的素材，撰写高质量的公众号文章。
+
+输出格式：
+- 使用 Markdown 格式
+- 标题使用 # 开头
+- 正文分段清晰"""
+    except Exception as e:
+        print(f"⚠️ 错误：无法读取 prompt 文件 {prompt_file}: {e}")
+        print("   使用内置默认 prompt")
+        return """你是一个专业的公众号文章写作助手。
+
+请基于提供的素材，撰写高质量的公众号文章。
+
+输出格式：
+- 使用 Markdown 格式
+- 标题使用 # 开头
+- 正文分段清晰"""
 
 
 def _build_user_message(topic: str, search_results: List[SearchResult]) -> str:
@@ -329,7 +401,9 @@ async def generate_with_sdk(
     article = _parse_article(result_text, topic, search_results)
 
     # 7. 生成日志文档
-    log_gen = LogDocumentGenerator(topic, metrics)
+    # 从环境变量读取配置（0或空表示不截断）
+    max_result_length = int(os.getenv("LOG_MAX_RESULT_LENGTH", "0")) or None
+    log_gen = LogDocumentGenerator(topic, metrics, max_result_length=max_result_length)
     log_markdown = log_gen.generate_markdown()
 
     # 8. 构建 metrics 字典
