@@ -1,6 +1,6 @@
 # 微信公众号文章写作 Agent
 
-基于 MiniMax API（Anthropic 兼容）和 NotebookLM 的智能写作助手，能够在写作过程中动态调用知识库获取素材，生成高质量的公众号文章。
+基于 Claude Agent SDK 和 NotebookLM 的智能写作助手，能够在写作过程中动态调用知识库获取素材，生成高质量的公众号文章。
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -41,22 +41,29 @@ pip install -r requirements.txt
 
 ### 3. 配置环境变量
 
-```bash
-# 复制配置文件
-cp .env.example .env
+## API 配置
 
-# 编辑 .env 文件，配置 MiniMax API
-# ANTHROPIC_API_KEY=your-minimax-api-key-here
-# ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic
-# ANTHROPIC_MODEL=MiniMax-M2.1
+### 官方 Anthropic API (推荐)
+
+1. 获取 API Key: https://platform.claude.com/settings/keys
+2. 复制 `.env.example` 为 `.env`
+3. 设置 `ANTHROPIC_API_KEY=your-api-key`
+
+```bash
+cp .env.example .env
+# 编辑 .env 填入你的 API Key
 ```
 
-**获取 MiniMax API Key**:
-1. 访问 [https://platform.minimaxi.com](https://platform.minimaxi.com)
-2. 注册账号并创建 API Key
-3. 将 Key 粘贴到 `.env` 文件中
+### 验证配置
 
-> 💡 **提示**: 项目已从第三方 Anthropic 代理迁移到 MiniMax 官方 API。详见 [docs/status.md](status.md)
+```bash
+# 运行简单测试验证 API 连接
+python -c "from anthropic import Anthropic; c = Anthropic(); print('API OK')"
+```
+
+### MiniMax API (备用)
+
+如需使用 MiniMax API，参见 `.env.example` 中的 "备用配置" 部分
 
 ### 4. 运行
 
@@ -115,6 +122,73 @@ wechat-writer-agent/
 - **[docs/setup.md](docs/setup.md)** - 详细安装配置指南
 - **[docs/development-guide.md](docs/development-guide.md)** - 开发规范和 API 使用
 - **[docs/testing-guide.md](docs/testing-guide.md)** - 测试框架和用例
+
+---
+
+## 🔧 故障排查
+
+### 工具调用为0的问题
+
+如果您发现运行日志中 `tool_call_count=0`，请按以下步骤诊断：
+
+#### 步骤1：快速诊断配置
+
+运行诊断脚本检查配置状态：
+```bash
+python diagnose_notebooklm.py
+```
+
+该脚本会检查：
+- ✅ 环境变量配置（NOTEBOOK_ID, NOTEBOOK_URL）
+- ✅ NotebookLM skill安装状态
+- ✅ 工具注册逻辑
+- ✅ 认证配置
+- ✅ Agent SDK模式
+
+如果发现 ❌ 关键问题，按照提示修复配置。
+
+#### 步骤2：测试工具调用
+
+配置修复后，运行测试脚本验证：
+```bash
+python test_tool_calls.py
+```
+
+该脚本会：
+- 使用多个测试场景（需要检索 vs 素材充分）
+- 分析Agent的工具调用行为
+- 判断是"配置问题"还是"智能决策"
+
+#### 步骤3：查看详细日志
+
+如果测试通过但实际使用中仍为0：
+1. 检查飞书日志文档的"Configuration Summary"部分
+2. 查看诊断提示：
+   - ⚠️ "Notebook ID未设置" → 配置问题
+   - ✅ "Agent智能决策" → 正常行为
+
+### 常见问题
+
+**Q: 为什么工具调用为0？**
+A: 可能原因：
+1. NOTEBOOK_ID未配置（运行 `diagnose_notebooklm.py` 检查）
+2. 预检索结果已充分，Agent判断无需追加检索（正常行为）
+3. NotebookLM笔记本为空或内容不相关
+
+**Q: 如何区分配置问题和正常行为？**
+A: 使用诊断和测试工具：
+- `diagnose_notebooklm.py` → 发现配置问题
+- `test_tool_calls.py` → 验证工具调用能力
+- 查看日志的配置摘要 → 智能诊断提示
+
+**Q: 日志中看不到Agent思考过程？**
+A: 这是Claude API的技术限制。详见 [logging_limitations.md](logging_limitations.md)
+
+### 更多帮助
+
+- **技术限制文档**: [logging_limitations.md](logging_limitations.md)
+- **完整实施文档**: [agent_log.md](agent_log.md)
+- **项目状态**: [project-status.md](project-status.md)
 
 ---
 
@@ -239,12 +313,12 @@ def run_pipeline(
 
 ## 🔗 相关资源
 
-- [MiniMax API 文档](https://platform.minimaxi.com/docs/api-reference/text-anthropic-api)
 - [Anthropic Claude 文档](https://docs.anthropic.com/)
+- [Claude Agent SDK](https://github.com/anthropics/anthropic-sdk-python)
 - [NotebookLM](https://notebooklm.google/)
 - [项目文档](docs/)
 
 ---
 
 **维护者**: 项目团队
-**最后更新**: 2026-01-26（API 迁移到 MiniMax）
+**最后更新**: 2026-01-28（迁移到官方 Anthropic API）
