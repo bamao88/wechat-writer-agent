@@ -10,7 +10,11 @@ import sys
 
 load_dotenv()
 
+# Timeout configuration
+API_TIMEOUT_SECONDS = 30
 
+
+@pytest.mark.timeout(60)  # Hard timeout in pytest
 @pytest.mark.asyncio
 async def test_skill_discovery():
     """Verify SDK discovers NotebookLM Skill from filesystem"""
@@ -35,29 +39,37 @@ async def test_skill_discovery():
         env=env_vars
     )
 
-    result_text = ""
-    async for message in query(
-        prompt="What tools or skills do you have access to? List them briefly.",
-        options=options
-    ):
-        if hasattr(message, 'result') and message.result:
-            result_text = message.result
+    try:
+        async with asyncio.timeout(API_TIMEOUT_SECONDS):  # 30 second timeout
+            result_text = ""
+            async for message in query(
+                prompt="What tools or skills do you have access to? List them briefly.",
+                options=options
+            ):
+                if hasattr(message, 'result') and message.result:
+                    result_text = message.result
 
-    # Agent should mention NotebookLM or knowledge/notebook querying capability
-    assert result_text, "No response received from Agent"
-    print(f"\n=== Agent Response ===\n{result_text}\n")
+            # Agent should mention NotebookLM or knowledge/notebook querying capability
+            assert result_text, "No response received from Agent"
+            print(f"\n=== Agent Response ===\n{result_text}\n")
 
-    # Check for tool-related keywords (flexible matching)
-    tool_indicators = ["notebooklm", "notebook", "knowledge", "query", "skill", "tool"]
-    found = any(indicator in result_text.lower() for indicator in tool_indicators)
+            # Check for tool-related keywords (flexible matching)
+            tool_indicators = ["notebooklm", "notebook", "knowledge", "query", "skill", "tool"]
+            found = any(indicator in result_text.lower() for indicator in tool_indicators)
 
-    # This is a soft assertion - if Agent doesn't mention tools, it might still work
-    # The real test is in Phase 2 when we verify actual tool calling
-    if not found:
-        print("[WARNING] Agent response does not explicitly mention tools.")
-        print("This may be normal - tool awareness varies by prompt.")
+            # This is a soft assertion - if Agent doesn't mention tools, it might still work
+            # The real test is in Phase 2 when we verify actual tool calling
+            if not found:
+                print("[WARNING] Agent response does not explicitly mention tools.")
+                print("This may be normal - tool awareness varies by prompt.")
+
+    except asyncio.TimeoutError:
+        pytest.fail(f"API call timed out after {API_TIMEOUT_SECONDS}s. Check ANTHROPIC_BASE_URL: {env_vars.get('ANTHROPIC_BASE_URL')}")
+    except Exception as e:
+        pytest.fail(f"API error: {type(e).__name__}: {e}")
 
 
+@pytest.mark.timeout(60)  # Hard timeout in pytest
 @pytest.mark.asyncio
 async def test_sdk_options_accepted():
     """Verify MiniMax API accepts our SDK options without error"""
@@ -78,15 +90,23 @@ async def test_sdk_options_accepted():
         env=env_vars
     )
 
-    response_received = False
-    async for message in query(prompt="Hello", options=options):
-        if hasattr(message, 'result') and message.result:
-            response_received = True
-            print(f"API Response: {message.result[:100]}...")
+    try:
+        async with asyncio.timeout(API_TIMEOUT_SECONDS):  # 30 second timeout
+            response_received = False
+            async for message in query(prompt="Hello", options=options):
+                if hasattr(message, 'result') and message.result:
+                    response_received = True
+                    print(f"API Response: {message.result[:100]}...")
 
-    assert response_received, "No response from MiniMax API"
+            assert response_received, "No response from MiniMax API"
+
+    except asyncio.TimeoutError:
+        pytest.fail(f"API call timed out after {API_TIMEOUT_SECONDS}s. Check ANTHROPIC_BASE_URL: {env_vars.get('ANTHROPIC_BASE_URL')}")
+    except Exception as e:
+        pytest.fail(f"API error: {type(e).__name__}: {e}")
 
 
+@pytest.mark.timeout(60)  # Hard timeout in pytest
 @pytest.mark.asyncio
 async def test_sdk_startup_logs_skill_discovery():
     """
@@ -113,57 +133,65 @@ async def test_sdk_startup_logs_skill_discovery():
     original_stdout = sys.stdout
 
     try:
-        sys.stdout = captured_output
+        async with asyncio.timeout(API_TIMEOUT_SECONDS):  # 30 second timeout
+            try:
+                sys.stdout = captured_output
 
-        options = ClaudeAgentOptions(
-            model=os.getenv("MODEL_NAME", "MiniMax-M2.1"),
-            max_turns=1,
-            setting_sources=["user"],
-            allowed_tools=["Skill"],
-            system_prompt="Say 'test complete'.",
-            env=env_vars
-        )
+                options = ClaudeAgentOptions(
+                    model=os.getenv("MODEL_NAME", "MiniMax-M2.1"),
+                    max_turns=1,
+                    setting_sources=["user"],
+                    allowed_tools=["Skill"],
+                    system_prompt="Say 'test complete'.",
+                    env=env_vars
+                )
 
-        # Trigger SDK initialization by starting a query
-        async for message in query(prompt="Test", options=options):
-            pass  # We only care about initialization, not the response
+                # Trigger SDK initialization by starting a query
+                async for message in query(prompt="Test", options=options):
+                    pass  # We only care about initialization, not the response
 
-    finally:
-        sys.stdout = original_stdout
+            finally:
+                sys.stdout = original_stdout
 
-    logs = captured_output.getvalue()
-    print(f"\n=== Captured SDK Logs ===\n{logs}\n")
+            logs = captured_output.getvalue()
+            print(f"\n=== Captured SDK Logs ===\n{logs}\n")
 
-    # Check for indicators that SDK processed the setting_sources and allowed_tools
-    # These are the key indicators that tool registration occurred:
-    skill_discovery_indicators = [
-        "Skill",           # SDK mentions Skill category
-        "skill",           # lowercase variant
-        "notebooklm",      # Specific skill name
-        "NotebookLM",      # Capitalized variant
-        "setting_sources", # Configuration being applied
-        "allowed_tools",   # Tools being registered
-        "discovery",       # Discovery process
-        "registered",      # Registration confirmation
-        "loaded",          # Skill loaded
-    ]
+            # Check for indicators that SDK processed the setting_sources and allowed_tools
+            # These are the key indicators that tool registration occurred:
+            skill_discovery_indicators = [
+                "Skill",           # SDK mentions Skill category
+                "skill",           # lowercase variant
+                "notebooklm",      # Specific skill name
+                "NotebookLM",      # Capitalized variant
+                "setting_sources", # Configuration being applied
+                "allowed_tools",   # Tools being registered
+                "discovery",       # Discovery process
+                "registered",      # Registration confirmation
+                "loaded",          # Skill loaded
+            ]
 
-    found_indicators = [ind for ind in skill_discovery_indicators if ind.lower() in logs.lower()]
+            found_indicators = [ind for ind in skill_discovery_indicators if ind.lower() in logs.lower()]
 
-    # Also check our custom log message from _get_allowed_tools
-    custom_log_present = "[INFO] Enabling Skill discovery" in logs
+            # Also check our custom log message from _get_allowed_tools
+            custom_log_present = "[INFO] Enabling Skill discovery" in logs
 
-    print(f"Found indicators in logs: {found_indicators}")
-    print(f"Custom _get_allowed_tools log present: {custom_log_present}")
+            print(f"Found indicators in logs: {found_indicators}")
+            print(f"Custom _get_allowed_tools log present: {custom_log_present}")
 
-    # At minimum, our custom log should appear (confirms _get_allowed_tools was called)
-    assert custom_log_present or len(found_indicators) > 0, (
-        f"SDK startup did not log skill discovery. "
-        f"Expected at least our custom log '[INFO] Enabling Skill discovery' or SDK indicators. "
-        f"Captured logs:\n{logs}"
-    )
+            # At minimum, our custom log should appear (confirms _get_allowed_tools was called)
+            assert custom_log_present or len(found_indicators) > 0, (
+                f"SDK startup did not log skill discovery. "
+                f"Expected at least our custom log '[INFO] Enabling Skill discovery' or SDK indicators. "
+                f"Captured logs:\n{logs}"
+            )
+
+    except asyncio.TimeoutError:
+        pytest.fail(f"API call timed out after {API_TIMEOUT_SECONDS}s. Check ANTHROPIC_BASE_URL: {env_vars.get('ANTHROPIC_BASE_URL')}")
+    except Exception as e:
+        pytest.fail(f"API error: {type(e).__name__}: {e}")
 
 
+@pytest.mark.timeout(60)  # Hard timeout in pytest
 @pytest.mark.asyncio
 async def test_minimax_api_parses_tool_definitions():
     """
@@ -224,62 +252,69 @@ async def test_minimax_api_parses_tool_definitions():
 
             return response
 
-    # Patch httpx transport
-    with patch.object(httpx, 'AsyncHTTPTransport', CapturingTransport):
-        options = ClaudeAgentOptions(
-            model=os.getenv("MODEL_NAME", "MiniMax-M2.1"),
-            max_turns=1,
-            setting_sources=["user"],
-            allowed_tools=["Skill"],
-            system_prompt="You have access to knowledge base tools. Confirm you see them.",
-            env=env_vars
-        )
+    try:
+        async with asyncio.timeout(API_TIMEOUT_SECONDS):  # 30 second timeout
+            # Patch httpx transport
+            with patch.object(httpx, 'AsyncHTTPTransport', CapturingTransport):
+                options = ClaudeAgentOptions(
+                    model=os.getenv("MODEL_NAME", "MiniMax-M2.1"),
+                    max_turns=1,
+                    setting_sources=["user"],
+                    allowed_tools=["Skill"],
+                    system_prompt="You have access to knowledge base tools. Confirm you see them.",
+                    env=env_vars
+                )
 
-        response_received = False
-        error_messages = []
+                response_received = False
+                error_messages = []
 
-        async for message in query(
-            prompt="Confirm what tools you have available.",
-            options=options
-        ):
-            if hasattr(message, 'result') and message.result:
-                response_received = True
-                result = message.result
-                # Check for error indicators in response
-                error_keywords = ['error', 'invalid', 'unsupported', 'unknown tool', 'schema']
-                for kw in error_keywords:
-                    if kw in result.lower():
-                        error_messages.append(f"Potential error indicator '{kw}' found in response")
+                async for message in query(
+                    prompt="Confirm what tools you have available.",
+                    options=options
+                ):
+                    if hasattr(message, 'result') and message.result:
+                        response_received = True
+                        result = message.result
+                        # Check for error indicators in response
+                        error_keywords = ['error', 'invalid', 'unsupported', 'unknown tool', 'schema']
+                        for kw in error_keywords:
+                            if kw in result.lower():
+                                error_messages.append(f"Potential error indicator '{kw}' found in response")
 
-    # Assertions
-    assert response_received, "No response received from MiniMax API"
+            # Assertions
+            assert response_received, "No response received from MiniMax API"
 
-    # Check that API accepted the request (200-level response)
-    if api_responses:
-        status = api_responses[-1].get('status', 0)
-        assert 200 <= status < 300, f"API returned error status: {status}"
-        print(f"\n=== API Response Status: {status} ===")
+            # Check that API accepted the request (200-level response)
+            if api_responses:
+                status = api_responses[-1].get('status', 0)
+                assert 200 <= status < 300, f"API returned error status: {status}"
+                print(f"\n=== API Response Status: {status} ===")
 
-    # Check for tool definitions in request (if captured)
-    if api_requests:
-        last_request = api_requests[-1]
-        has_tools = 'tools' in last_request
-        print(f"\nTool definitions present in API request: {has_tools}")
-        if has_tools:
-            tool_count = len(last_request['tools'])
-            print(f"Number of tools sent to API: {tool_count}")
-            assert tool_count > 0, "Tools array is empty - SDK may not have discovered Skills"
-            # Verify tool schema structure
-            first_tool = last_request['tools'][0]
-            assert 'name' in first_tool, "Tool missing 'name' field"
-            print(f"First tool name: {first_tool.get('name')}")
+            # Check for tool definitions in request (if captured)
+            if api_requests:
+                last_request = api_requests[-1]
+                has_tools = 'tools' in last_request
+                print(f"\nTool definitions present in API request: {has_tools}")
+                if has_tools:
+                    tool_count = len(last_request['tools'])
+                    print(f"Number of tools sent to API: {tool_count}")
+                    assert tool_count > 0, "Tools array is empty - SDK may not have discovered Skills"
+                    # Verify tool schema structure
+                    first_tool = last_request['tools'][0]
+                    assert 'name' in first_tool, "Tool missing 'name' field"
+                    print(f"First tool name: {first_tool.get('name')}")
 
-    # Warn but don't fail on potential error indicators (may be false positives)
-    if error_messages:
-        print(f"\n[WARNING] Potential issues detected: {error_messages}")
-        print("These may be false positives - manual review recommended")
+            # Warn but don't fail on potential error indicators (may be false positives)
+            if error_messages:
+                print(f"\n[WARNING] Potential issues detected: {error_messages}")
+                print("These may be false positives - manual review recommended")
 
-    print("\n=== API-02 Verification: Tool definitions accepted by MiniMax API ===")
+            print("\n=== API-02 Verification: Tool definitions accepted by MiniMax API ===")
+
+    except asyncio.TimeoutError:
+        pytest.fail(f"API call timed out after {API_TIMEOUT_SECONDS}s. Check ANTHROPIC_BASE_URL: {env_vars.get('ANTHROPIC_BASE_URL')}")
+    except Exception as e:
+        pytest.fail(f"API error: {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
