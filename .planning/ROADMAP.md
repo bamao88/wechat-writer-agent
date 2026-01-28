@@ -2,7 +2,7 @@
 
 ## 概述
 
-本路线图旨在修复 Agent SDK 的工具调用机制,使 Agent 能够在生成文章时自动调用 NotebookLM 知识库检索工具。通过 4 个阶段,从工具注册与协议兼容性、工具调用验证与会话历史处理、错误处理与 API 差异文档化,到最终迁移到官方 Anthropic API,确保系统能够实现真正的"知识驱动写作"。
+本路线图旨在修复 Agent SDK 的工具调用机制,使 Agent 能够在生成文章时自动调用 NotebookLM 知识库检索工具。通过 5 个阶段,从工具注册与协议兼容性、工具调用验证与会话历史处理、错误处理与 API 差异文档化、迁移到官方 Anthropic API,到 OpenAI Agent SDK 迁移,确保系统能够实现真正的"知识驱动写作"。
 
 ## 阶段
 
@@ -16,6 +16,7 @@
 - [x] **阶段 2: 工具调用验证与会话历史处理** - 验证 Agent 自动调用工具并确认会话历史格式正确
 - [ ] **阶段 3: 错误处理与 API 差异文档化** - 实现完整错误处理并记录 MiniMax API 特性
 - [ ] **阶段 4: 迁移到官方 Anthropic API** - 从第三方 MiniMax API 迁移到官方 Anthropic API,移除适配代码
+- [ ] **阶段 5: OpenAI Agent SDK 迁移** - 实现 OpenAI Agent SDK 作为替代执行路径,与 Claude Agent SDK 基线并行
 
 ## 阶段详情
 
@@ -103,10 +104,36 @@
 - [ ] 04-02-PLAN.md — 更新默认配置与迁移测试 (MIG-03)
 - [ ] 04-03-PLAN.md — 文档更新与最终验证 (MIG-04)
 
+### 阶段 5: OpenAI Agent SDK 迁移
+**目标**: 实现 OpenAI Agent SDK 作为替代执行路径,使用 LiteLLM 集成 MiniMax API,与现有 Claude Agent SDK 基线并行运行
+
+**依赖**: 无 (独立于阶段 3-4,可并行执行)
+
+**需求**: SDK5-01, SDK5-02, SDK5-03, SDK5-04, SDK5-05
+
+**成功标准** (必须为真):
+  1. OpenAI Agent SDK (openai-agents>=0.7.0) 和 LiteLLM (>=1.80.15) 已安装
+  2. 新的 `src/modules/openai_agent.py` 模块已创建 (Claude SDK 保持不变)
+  3. NotebookLM 工具使用 @function_tool 装饰器封装
+  4. Agent 通过 LiteLLM Anthropic 兼容端点与 MiniMax API 运行
+  5. 工具调用正常工作 (metrics.tool_call_count > 0)
+  6. 流式输出正常工作
+  7. Token 指标通过 context_wrapper 收集
+  8. 集成测试验证 OpenAI SDK 路径端到端工作
+  9. Claude Agent SDK 基线保持功能完整且未修改
+
+**计划**: 3 plans
+
+计划:
+- [ ] 05-01-PLAN.md — 安装依赖并创建 NotebookLM @function_tool 封装
+- [ ] 05-02-PLAN.md — 创建 OpenAI Agent SDK runner 和指标收集
+- [ ] 05-03-PLAN.md — 集成测试与基线验证
+
 ## 进度
 
 **执行顺序:**
 阶段按数字顺序执行: 1 → 2 → 3 → 4
+阶段 5 可与阶段 3-4 并行执行 (独立实现路径)
 
 | 阶段 | 计划完成数 | 状态 | 完成日期 |
 |------|-----------|------|---------|
@@ -114,8 +141,9 @@
 | 2. 工具调用验证与会话历史处理 | 4/4 | 已完成 | 2026-01-28 |
 | 3. 错误处理与 API 差异文档化 | 0/3 | 进行中 | - |
 | 4. 迁移到官方 Anthropic API | 0/3 | 未开始 | - |
+| 5. OpenAI Agent SDK 迁移 | 0/3 | 未开始 | - |
 
 ---
 *路线图创建时间: 2026-01-28*
-*最后修订时间: 2026-01-28 - 阶段 4 计划完成*
+*最后修订时间: 2026-01-28 - 阶段 5 计划完成*
 *里程碑: v0.1 Agent SDK 工具调用修复*
