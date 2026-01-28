@@ -199,6 +199,11 @@ class AgentSDKRunner:
         if os.getenv("ANTHROPIC_BASE_URL"):
             env_vars["ANTHROPIC_BASE_URL"] = os.getenv("ANTHROPIC_BASE_URL")
 
+        # MiniMax M2.1 兼容性: 设置超时为3000秒(3000000ms)
+        # MiniMax推理模型在复杂任务中需要更长时间深度思考
+        # SDK默认30秒超时会导致推理任务中断
+        env_vars["API_TIMEOUT_MS"] = "3000000"
+
         options = ClaudeAgentOptions(
             model=self.model,
             max_turns=max_turns,

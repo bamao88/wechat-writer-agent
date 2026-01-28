@@ -1,4 +1,23 @@
-"""Logging Hooks - Claude Agent SDK 生命周期钩子实现"""
+"""Logging Hooks - Claude Agent SDK 生命周期钩子实现
+
+WARNING: Async Safety Requirements
+===================================
+All hooks in this module MUST be async-safe to prevent blocking the SSE stream.
+
+CRITICAL RULES:
+1. ALL hooks are async functions (async def) - this is required for SDK compatibility
+2. NEVER use synchronous input() or other blocking IO operations in hooks
+3. Use print() for logging (non-blocking) - DO NOT use blocking file operations
+4. Hooks should complete quickly (<100ms typical) to avoid stream delays
+
+MiniMax Streaming Context:
+- MiniMax M2.1 uses SSE (Server-Sent Events) for streaming responses
+- Blocking operations freeze the async event loop
+- Frozen event loop cannot process SSE chunks → connection timeout (60s)
+- Use anyio.to_thread.run_sync() if you must call synchronous code
+
+Reference: .planning/research/SDK与MiniMax流式传输实现的兼容性架构与工程解决方案深度报告.md
+"""
 import time
 from typing import Dict, Any, Optional
 
