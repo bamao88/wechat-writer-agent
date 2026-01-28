@@ -43,10 +43,10 @@ class TestAgentSDKRunnerInit:
         assert runner.notebook_url == "https://notebooklm.google.com/notebook/abc"
 
 
-class TestAgentSDKRunnerGetToolsConfig:
-    """测试_get_tools_config方法"""
+class TestAgentSDKRunnerGetAllowedTools:
+    """测试_get_allowed_tools方法"""
 
-    def test_get_tools_config_without_notebook(self):
+    def test_get_allowed_tools_without_notebook(self):
         """测试无NotebookLM时返回空工具列表"""
         runner = AgentSDKRunner(
             api_key="test-key",
@@ -54,12 +54,12 @@ class TestAgentSDKRunnerGetToolsConfig:
             temperature=0.7
         )
 
-        tools = runner._get_tools_config()
+        tools = runner._get_allowed_tools()
 
         assert tools == []
 
-    def test_get_tools_config_with_notebook(self):
-        """测试有NotebookLM时返回工具定义"""
+    def test_get_allowed_tools_with_notebook(self):
+        """测试有NotebookLM时返回['Skill']以启用Skills发现"""
         runner = AgentSDKRunner(
             api_key="test-key",
             model="claude-sonnet-4",
@@ -68,16 +68,13 @@ class TestAgentSDKRunnerGetToolsConfig:
             notebook_url="https://notebooklm.google.com/notebook/abc"
         )
 
-        tools = runner._get_tools_config()
+        tools = runner._get_allowed_tools()
 
-        assert len(tools) == 1
-        assert tools[0]["name"] == "query_notebooklm"
-        assert tools[0]["type"] == "custom"
-        assert "description" in tools[0]
-        assert "input_schema" in tools[0]
+        # After 01-01 refactoring: returns ["Skill"] to enable SDK's Skill discovery
+        assert tools == ["Skill"]
 
-    def test_get_tools_config_includes_notebook_id_in_schema(self):
-        """测试工具定义包含notebook_id"""
+    def test_get_allowed_tools_returns_skill_category(self):
+        """测试返回'Skill'类别以启用SDK工具发现"""
         runner = AgentSDKRunner(
             api_key="test-key",
             model="claude-sonnet-4",
@@ -85,13 +82,11 @@ class TestAgentSDKRunnerGetToolsConfig:
             notebook_id="nb-456"
         )
 
-        tools = runner._get_tools_config()
+        tools = runner._get_allowed_tools()
 
-        # 验证schema包含必需的属性
-        schema = tools[0]["input_schema"]
-        assert schema["type"] == "object"
-        assert "question" in schema["properties"]
-        assert "question" in schema["required"]
+        # SDK will discover tools from setting_sources when "Skill" is in allowed_tools
+        assert isinstance(tools, list)
+        assert "Skill" in tools
 
 
 class TestAgentSDKRunnerBuildUserMessage:
@@ -220,7 +215,8 @@ class TestAgentSDKRunnerGenerate:
         """测试基本生成流程"""
         # Mock SDK query返回
         mock_message = MagicMock()
-        mock_message.text = "生成的文章内容"
+        mock_message.result = "生成的文章内容"  # Use .result not .text
+        mock_message.usage = None
         mock_message.stop_reason = "end_turn"
 
         mock_query.return_value = async_iterator([mock_message])
@@ -248,7 +244,8 @@ class TestAgentSDKRunnerGenerate:
     async def test_generate_calls_query_with_correct_params(self, mock_query):
         """测试调用query时使用正确的参数"""
         mock_message = MagicMock()
-        mock_message.text = "内容"
+        mock_message.result = "内容"  # Use .result not .text
+        mock_message.usage = None
         mock_message.stop_reason = "end_turn"
         mock_query.return_value = async_iterator([mock_message])
 
@@ -280,7 +277,8 @@ class TestAgentSDKRunnerGenerate:
     async def test_generate_with_search_results(self, mock_query):
         """测试包含搜索结果的生成"""
         mock_message = MagicMock()
-        mock_message.text = "基于搜索结果的文章"
+        mock_message.result = "基于搜索结果的文章"  # Use .result not .text
+        mock_message.usage = None
         mock_message.stop_reason = "end_turn"
         mock_query.return_value = async_iterator([mock_message])
 
@@ -315,7 +313,8 @@ class TestAgentSDKRunnerGenerate:
     async def test_generate_registers_hooks(self, mock_query):
         """测试generate注册hooks"""
         mock_message = MagicMock()
-        mock_message.text = "内容"
+        mock_message.result = "内容"  # Use .result not .text
+        mock_message.usage = None
         mock_message.stop_reason = "end_turn"
         mock_query.return_value = async_iterator([mock_message])
 
@@ -343,7 +342,8 @@ class TestAgentSDKRunnerGenerate:
     async def test_generate_with_tools(self, mock_query):
         """测试包含工具配置的生成"""
         mock_message = MagicMock()
-        mock_message.text = "使用工具的结果"
+        mock_message.result = "使用工具的结果"  # Use .result not .text
+        mock_message.usage = None
         mock_message.stop_reason = "end_turn"
         mock_query.return_value = async_iterator([mock_message])
 
@@ -361,23 +361,27 @@ class TestAgentSDKRunnerGenerate:
             max_turns=5
         )
 
-        # 验证tools被传递
+        # 验证allowed_tools被传递 (after 01-01 refactoring)
         call_kwargs = mock_query.call_args[1]
         assert "options" in call_kwargs
-        assert hasattr(call_kwargs["options"], "tools")
-        assert len(call_kwargs["options"].tools) > 0
+        assert hasattr(call_kwargs["options"], "allowed_tools")
+        assert call_kwargs["options"].allowed_tools == ["Skill"]
 
     @pytest.mark.asyncio
     @patch('src.modules.agent_sdk.query')
     async def test_generate_accumulates_text_from_multiple_messages(self, mock_query):
         """测试从多个消息累积文本"""
         # Mock多个消息返回
+        # Note: SDK returns last ResultMessage.result, not accumulation
+        # Test updated to reflect actual SDK behavior
         mock_msg1 = MagicMock()
-        mock_msg1.text = "第一部分"
+        mock_msg1.result = None  # Intermediate messages don't have result
+        mock_msg1.usage = None
         mock_msg1.stop_reason = None
 
         mock_msg2 = MagicMock()
-        mock_msg2.text = "第二部分"
+        mock_msg2.result = "最终结果"  # Only final message has result
+        mock_msg2.usage = None
         mock_msg2.stop_reason = "end_turn"
 
         mock_query.return_value = async_iterator([mock_msg1, mock_msg2])
@@ -395,16 +399,16 @@ class TestAgentSDKRunnerGenerate:
             max_turns=5
         )
 
-        # 验证文本被累积
-        assert "第一部分" in result_text
-        assert "第二部分" in result_text
+        # Verify final result is returned
+        assert result_text == "最终结果"
 
     @pytest.mark.asyncio
     @patch('src.modules.agent_sdk.query')
     async def test_generate_returns_metrics(self, mock_query):
         """测试返回完整的metrics"""
         mock_message = MagicMock()
-        mock_message.text = "内容"
+        mock_message.result = "内容"  # Use .result not .text
+        mock_message.usage = None
         mock_message.stop_reason = "end_turn"
         mock_query.return_value = async_iterator([mock_message])
 
