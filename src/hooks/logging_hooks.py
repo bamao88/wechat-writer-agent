@@ -19,7 +19,74 @@ MiniMax Streaming Context:
 Reference: .planning/research/SDK与MiniMax流式传输实现的兼容性架构与工程解决方案深度报告.md
 """
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+
+
+class ToolCallLifecycleLogger:
+    """工具调用生命周期日志记录器
+
+    记录工具调用的完整生命周期: registration → call_start → execution → response → error
+    满足 ERR-04 需求: 提供完整的可观测性
+    """
+
+    PHASES = ["registration", "call_start", "execution", "response", "error"]
+
+    def __init__(self, tool_name: str, tool_use_id: str):
+        """
+        初始化生命周期记录器
+
+        Args:
+            tool_name: 工具名称
+            tool_use_id: 工具调用唯一ID
+        """
+        self.tool_name = tool_name
+        self.tool_use_id = tool_use_id
+        self.start_time = time.time()
+        self.phases_logged: List[Dict[str, Any]] = []
+
+    def log_phase(self, phase: str, details: Optional[Dict[str, Any]] = None) -> None:
+        """
+        记录生命周期阶段
+
+        Args:
+            phase: 阶段名称，必须在 PHASES 中
+            details: 阶段详情（可选）
+
+        Raises:
+            ValueError: phase 不在 PHASES 中
+        """
+        if phase not in self.PHASES:
+            raise ValueError(f"Invalid phase '{phase}'. Must be one of {self.PHASES}")
+
+        timestamp = time.time()
+        elapsed = timestamp - self.start_time
+
+        # 记录阶段信息
+        phase_record = {
+            "phase": phase,
+            "timestamp": timestamp,
+            "elapsed": elapsed,
+            "details": details or {}
+        }
+        self.phases_logged.append(phase_record)
+
+        # 格式化日志输出
+        log_parts = [
+            f"[TOOL-LIFECYCLE] {self.tool_name}",
+            f"ID: {self.tool_use_id}",
+            f"Phase: {phase}"
+        ]
+
+        # 添加详情到日志
+        if details:
+            for key, value in details.items():
+                # 截断过长的值
+                value_str = str(value)
+                if len(value_str) > 100:
+                    value_str = value_str[:100] + "..."
+                log_parts.append(f"{key}: {value_str}")
+
+        print(" | ".join(log_parts))
 
 
 async def pre_tool_use_hook(
@@ -32,6 +99,7 @@ async def pre_tool_use_hook(
     PreToolUse Hook: 工具调用前触发
 
     记录工具名称、输入参数、开始时间
+    记录生命周期阶段: registration, call_start
 
     Args:
         input_data: 包含tool_name和tool_input的字典
@@ -42,6 +110,7 @@ async def pre_tool_use_hook(
     Returns:
         空字典（不阻塞执行）
     """
+    tool_name = input_data.get('tool_name')
     tool_input = input_data.get('tool_input', {})
 
     # Extract query parameters (for NotebookLM, this is the "question" field)
@@ -55,7 +124,7 @@ async def pre_tool_use_hook(
         invocation_reason = context.invocation_reason
 
     tool_call_record = {
-        'tool_name': input_data.get('tool_name'),
+        'tool_name': tool_name,
         'tool_use_id': tool_use_id,
         'input': tool_input,
         'query_params': query_params,
@@ -66,8 +135,16 @@ async def pre_tool_use_hook(
 
     metrics.tool_calls.append(tool_call_record)
 
-    # Log more detail
-    print(f"[PRE-TOOL] {tool_call_record['tool_name']} - ID: {tool_use_id}")
+    # 创建生命周期记录器并记录 registration 和 call_start 阶段
+    lifecycle_logger = ToolCallLifecycleLogger(tool_name, tool_use_id)
+    lifecycle_logger.log_phase("registration")
+    lifecycle_logger.log_phase("call_start", {"Input": str(tool_input)[:200]})
+
+    # 将 lifecycle_logger 存储在 tool_call_record 中，供 post_tool_use_hook 使用
+    tool_call_record['lifecycle_logger'] = lifecycle_logger
+
+    # Log more detail (保持现有日志格式)
+    print(f"[PRE-TOOL] {tool_name} - ID: {tool_use_id}")
     if query_params:
         print(f"  Query: {query_params[:100]}...")
 
@@ -84,6 +161,7 @@ async def post_tool_use_hook(
     PostToolUse Hook: 工具调用后触发
 
     更新对应记录的结束时间、耗时、结果
+    记录生命周期阶段: execution, response, error
 
     Args:
         input_data: 包含tool_response的字典
@@ -116,18 +194,56 @@ async def post_tool_use_hook(
                 success = False
 
     # 找到对应的pre记录并更新
-    for record in metrics.tool_calls:
-        if record.get('tool_use_id') == tool_use_id:
-            record['end_time'] = time.time()
-            record['duration_ms'] = (record['end_time'] - record['start_time']) * 1000
-            record['result'] = tool_response
-            record['result_summary'] = result_summary
-            record['result_length'] = result_length
-            record['success'] = success
+    record = None
+    lifecycle_logger = None
+    for rec in metrics.tool_calls:
+        if rec.get('tool_use_id') == tool_use_id:
+            record = rec
+            rec['end_time'] = time.time()
+            rec['duration_ms'] = (rec['end_time'] - rec['start_time']) * 1000
+            rec['result'] = tool_response
+            rec['result_summary'] = result_summary
+            rec['result_length'] = result_length
+            rec['success'] = success
+
+            # 获取生命周期记录器
+            lifecycle_logger = rec.get('lifecycle_logger')
             break
 
+    # 使用生命周期记录器记录 execution, response 或 error 阶段
+    if lifecycle_logger:
+        duration_s = record.get('duration_ms', 0) / 1000
+        lifecycle_logger.log_phase("execution", {"Duration": f"{duration_s:.2f}s"})
+
+        if success:
+            lifecycle_logger.log_phase(
+                "response",
+                {"Success": True, "Length": result_length}
+            )
+        else:
+            # 提取错误信息
+            error_msg = "Unknown error"
+            stderr = None
+            if isinstance(tool_response, dict):
+                error_msg = tool_response.get('error', error_msg)
+                stderr = tool_response.get('stderr')
+            elif isinstance(tool_response, str):
+                error_msg = tool_response[:200]
+
+            lifecycle_logger.log_phase(
+                "error",
+                {"Error": error_msg, "Stderr": stderr if stderr else "N/A"}
+            )
+
+            # 记录工具失败到 metrics (如果 metrics 有 add_tool_failure 方法)
+            if hasattr(metrics, 'add_tool_failure'):
+                tool_name = record.get('tool_name', 'Unknown')
+                metrics.add_tool_failure(tool_name, tool_use_id, error_msg, stderr)
+
+    # 保持现有日志格式
     print(f"[POST-TOOL] {input_data.get('tool_name')} completed")
-    print(f"  Duration: {record.get('duration_ms', 0):.2f}ms | Success: {success} | Result length: {result_length}")
+    if record:
+        print(f"  Duration: {record.get('duration_ms', 0):.2f}ms | Success: {success} | Result length: {result_length}")
 
     return {}
 
