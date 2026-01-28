@@ -24,6 +24,9 @@ class AgentRunMetrics:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     errors: List[str] = field(default_factory=list)
+    system_prompt: Optional[str] = None  # 系统提示词
+    initial_user_message: Optional[str] = None  # 初始用户消息
+    messages: List[Dict[str, Any]] = field(default_factory=list)  # 对话消息流
 
     @property
     def runtime_seconds(self) -> float:
@@ -65,31 +68,23 @@ class AgentSDKRunner:
         self.notebook_id = notebook_id
         self.notebook_url = notebook_url
 
-    def _get_tools_config(self) -> List[Dict[str, Any]]:
+    def _get_allowed_tools(self) -> List[str]:
         """
-        获取工具配置
+        Get list of allowed tools for SDK.
 
         Returns:
-            工具定义列表（若无NotebookLM则为空列表）
+            List of tool categories to enable. Uses "Skill" to enable
+            all Skills discovered from setting_sources directories.
         """
         if not self.notebook_id:
+            print("[WARNING] notebook_id not set, NotebookLM tool not registered")
+            print("  Hint: Set NOTEBOOK_ID in .env to enable tool calling")
             return []
 
-        return [{
-            "name": "query_notebooklm",
-            "type": "custom",
-            "description": "Query NotebookLM for information from uploaded sources",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "question": {
-                        "type": "string",
-                        "description": "The question to ask NotebookLM"
-                    }
-                },
-                "required": ["question"]
-            }
-        }]
+        print(f"[INFO] Enabling Skill discovery (notebook_id={self.notebook_id[:20]}...)")
+        # Return "Skill" to enable all Skills from setting_sources
+        # SDK will auto-discover tools from ~/.claude/skills/ and .claude/skills/
+        return ["Skill"]
 
     def _build_user_message(
         self,
@@ -186,11 +181,15 @@ class AgentSDKRunner:
         # 创建metrics实例
         metrics = AgentRunMetrics()
 
+        # 存储system prompt和初始消息
+        metrics.system_prompt = system_prompt
+
         # 构建用户消息
         user_message = self._build_user_message(topic, search_results)
+        metrics.initial_user_message = user_message
 
         # 获取工具配置
-        tools = self._get_tools_config()
+        allowed_tools = self._get_allowed_tools()
 
         # 创建hooks配置
         hooks = self._create_hooks(metrics)
@@ -203,7 +202,8 @@ class AgentSDKRunner:
         options = ClaudeAgentOptions(
             model=self.model,
             max_turns=max_turns,
-            tools=tools if tools else None,
+            setting_sources=["user"],  # Load Skills from ~/.claude/skills/
+            allowed_tools=allowed_tools if allowed_tools else None,  # Enable Skill discovery
             hooks=hooks,
             system_prompt=system_prompt,
             env=env_vars
@@ -212,12 +212,22 @@ class AgentSDKRunner:
         # 调用SDK query
         result_text = ""
         async for message in query(prompt=user_message, options=options):
+            # 记录消息到messages流
+            message_record = {
+                'timestamp': time.time(),
+                'type': type(message).__name__,
+            }
+
             # ResultMessage 包含最终结果
             if hasattr(message, 'result'):
                 result_text = message.result
+                if result_text is not None:
+                    message_record['result'] = result_text
+                    message_record['result_length'] = len(result_text)
 
             # 更新token统计（如果可用）
             if hasattr(message, 'usage') and message.usage:
+                message_record['usage'] = message.usage
                 # usage 是一个字典
                 if isinstance(message.usage, dict):
                     input_tokens = message.usage.get('input_tokens', 0)
@@ -228,6 +238,13 @@ class AgentSDKRunner:
                     metrics.prompt_tokens = input_tokens + cache_read_tokens
                     metrics.completion_tokens = output_tokens
                     metrics.total_tokens = metrics.prompt_tokens + metrics.completion_tokens
+
+            # 记录stop_reason（如果有）
+            if hasattr(message, 'stop_reason'):
+                message_record['stop_reason'] = message.stop_reason
+
+            # 添加到messages列表
+            metrics.messages.append(message_record)
 
         # 标记结束时间
         metrics.end_time = time.time()
