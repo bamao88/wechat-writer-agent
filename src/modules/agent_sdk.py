@@ -173,6 +173,20 @@ class AgentSDKRunner:
         # SDK will auto-discover tools from ~/.claude/skills/ and .claude/skills/
         return ["Skill"]
 
+    def _get_api_timeout_ms(self) -> str:
+        """
+        Get appropriate API timeout based on backend.
+
+        MiniMax M2.1: 3000000ms (3000s) - reasoning model needs long timeout
+        Official API: 120000ms (120s) - standard timeout sufficient
+        """
+        base_url = os.getenv("ANTHROPIC_BASE_URL", "")
+
+        if "minimaxi.com" in base_url:
+            return "3000000"  # 3000s for MiniMax reasoning model
+
+        return "120000"  # 120s for official API
+
     def _build_user_message(
         self,
         topic: str,
@@ -286,10 +300,8 @@ class AgentSDKRunner:
         if os.getenv("ANTHROPIC_BASE_URL"):
             env_vars["ANTHROPIC_BASE_URL"] = os.getenv("ANTHROPIC_BASE_URL")
 
-        # MiniMax M2.1 兼容性: 设置超时为3000秒(3000000ms)
-        # MiniMax推理模型在复杂任务中需要更长时间深度思考
-        # SDK默认30秒超时会导致推理任务中断
-        env_vars["API_TIMEOUT_MS"] = "3000000"
+        # Adaptive timeout: 120s for official API, 3000s for MiniMax
+        env_vars["API_TIMEOUT_MS"] = self._get_api_timeout_ms()
 
         options = ClaudeAgentOptions(
             model=self.model,
