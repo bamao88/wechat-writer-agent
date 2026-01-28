@@ -1,30 +1,41 @@
-"""MiniMax temperature 参数验证工具"""
+"""Temperature parameter validation with API-aware behavior.
+
+MiniMax API requires temperature > 0.0, official Anthropic API allows = 0.0.
+"""
+import os
+
+
+def is_minimax_api() -> bool:
+    """Check if using MiniMax API based on ANTHROPIC_BASE_URL."""
+    base_url = os.getenv("ANTHROPIC_BASE_URL", "")
+    return "minimaxi.com" in base_url
 
 
 def validate_temperature(temp: float) -> float:
     """
-    验证并调整 temperature 参数以符合 MiniMax 要求
+    Validate and adjust temperature parameter.
 
-    MiniMax 要求 temperature 在 (0.0, 1.0] 范围内（开区间）
+    MiniMax API: Requires temperature in (0.0, 1.0] range (exclusive of 0.0)
+    Official API: Allows full [0.0, 1.0] range (inclusive)
 
     Args:
-        temp: 原始 temperature 值
+        temp: Original temperature value
 
     Returns:
-        调整后的 temperature 值
+        Adjusted temperature value (unchanged for official API)
 
     Examples:
-        >>> validate_temperature(0.0)
-        0.001
-        >>> validate_temperature(0.7)
-        0.7
-        >>> validate_temperature(1.5)
-        1.0
+        # With MiniMax API:
+        >>> validate_temperature(0.0)  # Returns 0.001
+
+        # With official API:
+        >>> validate_temperature(0.0)  # Returns 0.0
     """
-    if temp <= 0.0:
-        # MiniMax 不允许 0.0，使用最小值
+    # Clamp to valid range first
+    temp = max(0.0, min(1.0, temp))
+
+    # MiniMax-specific: don't allow exactly 0.0
+    if is_minimax_api() and temp <= 0.0:
         return 0.001
-    elif temp > 1.0:
-        # 限制到最大值
-        return 1.0
+
     return temp
