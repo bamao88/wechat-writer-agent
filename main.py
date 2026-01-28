@@ -9,8 +9,8 @@ from writer_agent import create_writer_agent
 
 def main():
     """主函数"""
-    # 加载环境变量
-    load_dotenv()
+    # 加载环境变量（override=True 确保 .env 覆盖已有环境变量）
+    load_dotenv(override=True)
 
     # 检查 Anthropic API Key
     if not os.getenv("ANTHROPIC_API_KEY"):

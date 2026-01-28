@@ -14,7 +14,7 @@ class WechatWriterAgent:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "MiniMax-M2.1",
+        model: Optional[str] = None,
         notebook_id: Optional[str] = None,
         notebook_url: Optional[str] = None
     ):
@@ -23,7 +23,7 @@ class WechatWriterAgent:
 
         Args:
             api_key: Anthropic API Key，如果不提供则从环境变量读取
-            model: 使用的模型，默认 MiniMax-M2.1
+            model: 使用的模型，如果不提供则从环境变量 MODEL_NAME 读取
             notebook_id: NotebookLM 笔记本 ID（从库中获取）
             notebook_url: NotebookLM 笔记本 URL（直接指定）
         """
@@ -31,7 +31,7 @@ class WechatWriterAgent:
         if not self.api_key:
             raise ValueError("请设置 ANTHROPIC_API_KEY 环境变量或传入 api_key 参数")
 
-        self.model = model
+        self.model = model or os.getenv("MODEL_NAME", "claude-sonnet-4-5")
 
         # 支持自定义 base_url
         base_url = os.getenv("ANTHROPIC_BASE_URL")
@@ -108,14 +108,30 @@ class WechatWriterAgent:
             print(f"轮次 {turn + 1}/{max_turns}")
             print(f"{'='*50}")
 
-            # 调用 Claude
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=4096,
-                system=self._get_system_prompt(),
-                tools=tools,
-                messages=messages
-            )
+            # 调用 Claude（带重试机制）
+            max_retries = 3
+            response = None
+            for retry in range(max_retries):
+                try:
+                    response = self.client.messages.create(
+                        model=self.model,
+                        max_tokens=4096,
+                        system=self._get_system_prompt(),
+                        tools=tools,
+                        messages=messages
+                    )
+                    break  # 成功则跳出重试循环
+                except Exception as e:
+                    if retry < max_retries - 1:
+                        print(f"\n⚠️ 连接失败，正在重试 ({retry + 1}/{max_retries})...")
+                        import time
+                        time.sleep(2)  # 等待2秒后重试
+                    else:
+                        print(f"\n❌ 重试 {max_retries} 次后仍然失败")
+                        raise e
+            
+            if response is None:
+                raise Exception("API 调用失败")
 
             print(f"\n停止原因: {response.stop_reason}")
 
@@ -228,7 +244,7 @@ class WechatWriterAgent:
 
 def create_writer_agent(
     api_key: Optional[str] = None,
-    model: str = "claude-3-5-sonnet-20241022",
+    model: Optional[str] = None,
     notebook_id: Optional[str] = None,
     notebook_url: Optional[str] = None
 ) -> WechatWriterAgent:
@@ -236,8 +252,8 @@ def create_writer_agent(
     创建写作 Agent 实例
 
     Args:
-        api_key: Anthropic API Key
-        model: 使用的模型，默认 claude-3-5-sonnet-20241022
+        api_key: Anthropic API Key，如果不提供则从环境变量读取
+        model: 使用的模型，如果不提供则从环境变量 MODEL_NAME 读取
         notebook_id: NotebookLM 笔记本 ID（从库中获取）
         notebook_url: NotebookLM 笔记本 URL（直接指定）
 

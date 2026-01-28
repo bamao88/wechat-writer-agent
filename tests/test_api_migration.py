@@ -47,7 +47,7 @@ class TestAdaptiveTimeout:
             os.environ.pop("ANTHROPIC_BASE_URL", None)
 
             from src.modules.agent_sdk import AgentSDKRunner
-            runner = AgentSDKRunner("key", "claude-sonnet-4-20250514", 0.7)
+            runner = AgentSDKRunner("key", "claude-sonnet-4-5", 0.7)
 
             timeout = runner._get_api_timeout_ms()
             assert timeout == "120000"  # 120 seconds
@@ -120,7 +120,7 @@ class TestDefaultModelConfiguration:
             model_sdk_default = str(gen_sdk_sig.parameters['model'].default)
 
             # The defaults should either be:
-            # 1. A Claude model name directly (e.g., "claude-sonnet-4-20250514")
+            # 1. A Claude model name directly (e.g., "claude-sonnet-4-5")
             # 2. The result of os.getenv() which at import time resolves to the default
             assert "MiniMax-M2.1" != model_default, f"generate() should not default to MiniMax-M2.1, got: {model_default}"
             assert "MiniMax-M2.1" != model_sdk_default, f"generate_with_sdk() should not default to MiniMax-M2.1, got: {model_sdk_default}"
