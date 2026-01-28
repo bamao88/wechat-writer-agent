@@ -27,6 +27,7 @@ class AgentRunMetrics:
     system_prompt: Optional[str] = None  # 系统提示词
     initial_user_message: Optional[str] = None  # 初始用户消息
     messages: List[Dict[str, Any]] = field(default_factory=list)  # 对话消息流
+    conversation_history: List[Dict[str, Any]] = field(default_factory=list)  # 完整对话历史
 
     @property
     def runtime_seconds(self) -> float:
@@ -39,6 +40,92 @@ class AgentRunMetrics:
     def tool_call_count(self) -> int:
         """返回工具调用次数"""
         return len(self.tool_calls)
+
+    def add_assistant_message(self, content_blocks: List[Dict[str, Any]], stop_reason: Optional[str] = None) -> None:
+        """
+        记录助手响应消息
+
+        Args:
+            content_blocks: 内容块列表，可能包含thinking/text/tool_use
+            stop_reason: 停止原因
+        """
+        message = {
+            "role": "assistant",
+            "content": content_blocks,
+            "timestamp": time.time()
+        }
+        if stop_reason:
+            message["stop_reason"] = stop_reason
+        self.conversation_history.append(message)
+
+    def add_tool_result(self, tool_use_id: str, result: Any) -> None:
+        """
+        记录工具调用结果
+
+        Args:
+            tool_use_id: 工具使用ID
+            result: 工具返回结果
+        """
+        message = {
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": str(result)
+                }
+            ],
+            "timestamp": time.time()
+        }
+        self.conversation_history.append(message)
+
+    def get_history_summary(self) -> Dict[str, Any]:
+        """
+        获取对话历史统计摘要
+
+        Returns:
+            包含消息统计的字典
+        """
+        total_count = len(self.conversation_history)
+        user_count = sum(1 for msg in self.conversation_history if msg.get("role") == "user")
+        assistant_count = sum(1 for msg in self.conversation_history if msg.get("role") == "assistant")
+
+        # 检查是否包含thinking内容
+        has_thinking = False
+        for msg in self.conversation_history:
+            if msg.get("role") == "assistant":
+                content = msg.get("content", [])
+                if isinstance(content, list):
+                    has_thinking = any(block.get("type") == "thinking" for block in content)
+                    if has_thinking:
+                        break
+
+        # 检查是否进行了工具调用
+        has_tool_calls = False
+        for msg in self.conversation_history:
+            if msg.get("role") == "assistant":
+                content = msg.get("content", [])
+                if isinstance(content, list):
+                    has_tool_calls = any(block.get("type") == "tool_use" for block in content)
+                    if has_tool_calls:
+                        break
+
+        # 统计tool_result数量
+        tool_result_count = 0
+        for msg in self.conversation_history:
+            if msg.get("role") == "user":
+                content = msg.get("content", [])
+                if isinstance(content, list):
+                    tool_result_count += sum(1 for block in content if block.get("type") == "tool_result")
+
+        return {
+            "total_messages": total_count,
+            "user_messages": user_count,
+            "assistant_messages": assistant_count,
+            "tool_result_count": tool_result_count,
+            "has_thinking": has_thinking,
+            "has_tool_calls": has_tool_calls
+        }
 
 
 class AgentSDKRunner:
@@ -222,6 +309,22 @@ class AgentSDKRunner:
                 'timestamp': time.time(),
                 'type': type(message).__name__,
             }
+
+            # 检查是否包含thinking内容
+            if hasattr(message, 'thinking') and message.thinking:
+                message_record['has_thinking'] = True
+                message_record['thinking_length'] = len(message.thinking) if isinstance(message.thinking, str) else 0
+
+            # 检查是否是tool_use响应
+            if hasattr(message, 'content'):
+                content = message.content
+                if isinstance(content, list):
+                    # 检查内容块类型
+                    content_types = [block.get('type') for block in content if isinstance(block, dict)]
+                    if 'tool_use' in content_types:
+                        message_record['has_tool_use'] = True
+                    if 'thinking' in content_types:
+                        message_record['has_thinking'] = True
 
             # ResultMessage 包含最终结果
             if hasattr(message, 'result'):

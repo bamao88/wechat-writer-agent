@@ -42,17 +42,34 @@ async def pre_tool_use_hook(
     Returns:
         空字典（不阻塞执行）
     """
+    tool_input = input_data.get('tool_input', {})
+
+    # Extract query parameters (for NotebookLM, this is the "question" field)
+    query_params = None
+    if isinstance(tool_input, dict):
+        query_params = tool_input.get('question') or tool_input.get('query') or str(tool_input)
+
+    # Extract invocation reason from context if available
+    invocation_reason = None
+    if context and hasattr(context, 'invocation_reason'):
+        invocation_reason = context.invocation_reason
+
     tool_call_record = {
         'tool_name': input_data.get('tool_name'),
         'tool_use_id': tool_use_id,
-        'input': input_data.get('tool_input', {}),
+        'input': tool_input,
+        'query_params': query_params,
+        'invocation_reason': invocation_reason,
         'timestamp': time.time(),
         'start_time': time.time()
     }
 
     metrics.tool_calls.append(tool_call_record)
 
+    # Log more detail
     print(f"[PRE-TOOL] {tool_call_record['tool_name']} - ID: {tool_use_id}")
+    if query_params:
+        print(f"  Query: {query_params[:100]}...")
 
     return {}
 
@@ -77,15 +94,40 @@ async def post_tool_use_hook(
     Returns:
         空字典
     """
+    tool_response = input_data.get('tool_response')
+
+    # Calculate result summary and metadata
+    result_summary = None
+    result_length = 0
+    success = False
+
+    if tool_response:
+        result_str = str(tool_response)
+        result_length = len(result_str)
+        result_summary = result_str[:200]  # First 200 chars for logging
+
+        # Check if result is successful (not an error)
+        success = True
+        if isinstance(tool_response, dict):
+            if tool_response.get('error') or tool_response.get('status') == 'error':
+                success = False
+        elif isinstance(tool_response, str):
+            if tool_response.lower().startswith('error'):
+                success = False
+
     # 找到对应的pre记录并更新
     for record in metrics.tool_calls:
         if record.get('tool_use_id') == tool_use_id:
             record['end_time'] = time.time()
             record['duration_ms'] = (record['end_time'] - record['start_time']) * 1000
-            record['result'] = input_data.get('tool_response')
+            record['result'] = tool_response
+            record['result_summary'] = result_summary
+            record['result_length'] = result_length
+            record['success'] = success
             break
 
     print(f"[POST-TOOL] {input_data.get('tool_name')} completed")
+    print(f"  Duration: {record.get('duration_ms', 0):.2f}ms | Success: {success} | Result length: {result_length}")
 
     return {}
 
@@ -143,3 +185,50 @@ async def user_prompt_submit_hook(
     print(f"[USER-PROMPT] Topic: {prompt[:100]}...")
 
     return {}
+
+
+def get_tool_call_summary(metrics: Any) -> Dict[str, Any]:
+    """
+    Get summary statistics about tool calls from metrics.
+
+    Args:
+        metrics: AgentRunMetrics instance with tool_calls list
+
+    Returns:
+        Dict containing:
+        - total_count: Total number of tool calls
+        - tool_names: List of unique tool names called
+        - average_duration_ms: Average duration across all calls
+        - success_count: Number of successful calls
+        - failure_count: Number of failed calls
+    """
+    if not hasattr(metrics, 'tool_calls') or not metrics.tool_calls:
+        return {
+            'total_count': 0,
+            'tool_names': [],
+            'average_duration_ms': 0,
+            'success_count': 0,
+            'failure_count': 0
+        }
+
+    tool_calls = metrics.tool_calls
+    total_count = len(tool_calls)
+
+    # Get unique tool names
+    tool_names = list(set(call.get('tool_name') for call in tool_calls if call.get('tool_name')))
+
+    # Calculate average duration
+    durations = [call.get('duration_ms', 0) for call in tool_calls if 'duration_ms' in call]
+    average_duration_ms = sum(durations) / len(durations) if durations else 0
+
+    # Count successes and failures
+    success_count = sum(1 for call in tool_calls if call.get('success', False))
+    failure_count = total_count - success_count
+
+    return {
+        'total_count': total_count,
+        'tool_names': tool_names,
+        'average_duration_ms': average_duration_ms,
+        'success_count': success_count,
+        'failure_count': failure_count
+    }
